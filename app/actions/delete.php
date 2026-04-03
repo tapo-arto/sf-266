@@ -295,8 +295,18 @@ $desc = $isRoot
     $stmtDelLogs = $pdo->prepare("DELETE FROM safetyflash_logs WHERE flash_id IN ($logIds)");
     $stmtDelLogs->execute($ids);
 
-    if (function_exists('sf_log_event')) {
-        sf_log_event($logFlashId, 'deleted', $desc);
+    // Kirjataan tapahtuma vain jos $logFlashId:tä ei poistettu juuri nyt
+    // eikä se ole orvon kieliversion puuttuva juuri-flash.
+    if (function_exists('sf_log_event') && !in_array($logFlashId, $ids, true)) {
+        $checkExists = $pdo->prepare("SELECT 1 FROM sf_flashes WHERE id = ? LIMIT 1");
+        $checkExists->execute([$logFlashId]);
+        if ($checkExists->fetchColumn() !== false) {
+            try {
+                sf_log_event($logFlashId, 'deleted', $desc);
+            } catch (Throwable $logErr) {
+                error_log('delete.php: sf_log_event failed for flash_id ' . $logFlashId . ': ' . $logErr->getMessage());
+            }
+        }
     }
 
     // ========== AUDIT LOG ==========
