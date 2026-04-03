@@ -25,6 +25,12 @@ $getImageUrl = function ($filename) use ($base) {
     if (empty($filename)) {
         return "{$base}/assets/img/camera-placeholder.png";
     }
+    if (strpos($filename, 'lib_') === 0) {
+        if (file_exists(__DIR__ . "/../../uploads/library/{$filename}")) {
+            return "{$base}/uploads/library/{$filename}";
+        }
+        return "{$base}/assets/img/camera-placeholder.png";
+    }
     if (file_exists(__DIR__ . "/../../uploads/images/{$filename}")) {
         return "{$base}/uploads/images/{$filename}";
     }

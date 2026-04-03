@@ -246,7 +246,11 @@ export function bindRelatedFlash() {
         const card = getEl('sfPreviewCard') || getEl('sfPreviewCardGreen');
         const baseUrl = card?.dataset.baseUrl || window.SF_BASE_URL || '';
         const placeholder = `${baseUrl}/assets/img/camera-placeholder.png`;
-        const getImageUrl = (filename) => (filename ? `${baseUrl}/uploads/images/${filename}` : null);
+        const getImageUrl = (filename) => {
+            if (!filename) return null;
+            const dir = filename.startsWith('lib_') ? 'uploads/library' : 'uploads/images';
+            return `${baseUrl}/${dir}/${filename}`;
+        };
 
         const updateImage = (slot, filename) => {
             const imgUrl = filename ? getImageUrl(filename) : placeholder;
