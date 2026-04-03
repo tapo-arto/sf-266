@@ -304,13 +304,25 @@ try {
     $pdo->prepare("UPDATE sf_flashes SET processing_status = 'in_progress' WHERE id = ?")->execute([$flash_id]);
 
     $temp_data_dir = __DIR__ . '/../../uploads/processes/';
-    $job_file = $temp_data_dir . $flash_id . '.jobdata';
-    if (!file_exists($job_file)) {
-        throw new Exception("Job data file not found: $job_file");
+
+    // Read job data from sf_jobs table instead of a .jobdata file
+    $stmtJob = $pdo->prepare("SELECT id, job_data FROM sf_jobs WHERE flash_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1");
+    $stmtJob->execute([$flash_id]);
+    $jobRow = $stmtJob->fetch(PDO::FETCH_ASSOC);
+
+    if (!$jobRow) {
+        throw new Exception("No pending job record found in sf_jobs for flash_id: $flash_id");
     }
-    $job_data = json_decode(file_get_contents($job_file), true);
+
+    $sfJobId = (int)$jobRow['id'];
+
+    // Mark the job as in_progress
+    $pdo->prepare("UPDATE sf_jobs SET status = 'in_progress', updated_at = NOW() WHERE id = ?")
+        ->execute([$sfJobId]);
+
+    $job_data = json_decode((string)$jobRow['job_data'], true);
     if ($job_data === null) {
-        throw new Exception("Failed to decode job data from $job_file");
+        throw new Exception("Failed to decode job_data from sf_jobs row id: $sfJobId");
     }
     $post = $job_data['post'];
     $uploadedFiles = $job_data['files'];
@@ -572,8 +584,11 @@ try {
             ->execute([$flash_id]);
     }
 
-    // Siivoa väliaikaiset tiedostot
-    @unlink($job_file);
+    // Mark job as completed in sf_jobs and clean up uploaded temp files
+    if (isset($sfJobId)) {
+        $pdo->prepare("UPDATE sf_jobs SET status = 'completed', updated_at = NOW() WHERE id = ?")
+            ->execute([$sfJobId]);
+    }
     foreach ($uploadedFiles as $file_info) {
         if (isset($file_info['tmp_name'])) {
             @unlink($file_info['tmp_name']);
@@ -585,6 +600,10 @@ try {
 } catch (Throwable $e) {
     sf_app_log("Worker FAILED for flash_id: $flash_id. Error: " . $e->getMessage() . "\n" . $e->getTraceAsString(), 'ERROR');
     if (isset($pdo)) {
-                $pdo->prepare("UPDATE sf_flashes SET processing_status = 'error', is_processing = 0 WHERE id = ?")->execute([$flash_id]);
+        $pdo->prepare("UPDATE sf_flashes SET processing_status = 'error', is_processing = 0 WHERE id = ?")->execute([$flash_id]);
+        if (isset($sfJobId)) {
+            $pdo->prepare("UPDATE sf_jobs SET status = 'failed', updated_at = NOW() WHERE id = ?")
+                ->execute([$sfJobId]);
+        }
     }
 }

@@ -195,35 +195,41 @@ Frontend
 	•	Stores images and generated assets
 
 /uploads/processes/
-	•	Temporary process data files
-	•	Format: *.jobdata
+	•	Temporary uploaded image files waiting to be moved to permanent storage
+	•	These files are referenced by job records in the sf_jobs database table
+	•	Automatically cleaned up by app/cron/cleanup_old_jobs.php
 
 ⸻
 
 ⚙️ Process-Based State System (CRITICAL)
 
-The application uses a file-based process system to manage form state.
+The application uses a database-backed job queue (sf_jobs table) to manage background processing.
 
 How it works:
-	•	Each form session creates a process file:
+	•	Each form submission inserts a row into sf_jobs:
 
-/uploads/processes/{id}.jobdata
+INSERT INTO sf_jobs (flash_id, job_data, status) VALUES (?, ?, 'pending')
 
 
-	•	Contains:
+	•	The job_data JSON column contains:
 	•	step data
-	•	images
+	•	image references
 	•	annotations
 	•	layout configuration
+
+	•	The background worker (process_flash_worker.php) reads the row, marks it in_progress, processes images, then marks it completed.
 
 Used for:
 	•	preview rendering
 	•	step transitions
 	•	temporary storage before final save
 
-Risks:
-	•	files accumulate over time
-	•	no automatic cleanup currently
+Automatic cleanup:
+	•	app/cron/cleanup_old_jobs.php removes completed/failed rows older than 7 days and abandoned rows older than 30 days
+	•	Recommended cron: 0 2 * * * php /path/to/cleanup_old_jobs.php
+
+Database migration:
+	•	Run database/migrations/001_create_sf_jobs.sql once to create the sf_jobs table
 
 ⸻
 
@@ -276,8 +282,6 @@ Low Priority
 ⸻
 
 🧹 Maintenance Improvements (Recommended)
-	•	Automatic cleanup for /uploads/processes/
-	•	e.g. delete files older than 30 days
 	•	Better separation of frontend/backend state
 	•	Centralized configuration system
 

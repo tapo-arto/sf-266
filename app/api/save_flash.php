@@ -666,7 +666,7 @@ try {
         }
     }
 
-    // Tallenna väliaikaiset tiedot (kuvat ja dataURLit) omaan tiedostoon
+    // Tallenna väliaikaiset tiedot (kuvat ja dataURLit) tietokantaan (sf_jobs)
     $tempDataDir = __DIR__ . '/../../uploads/processes/';
     if (!is_dir($tempDataDir)) {
         @mkdir($tempDataDir, 0755, true);
@@ -686,8 +686,6 @@ try {
             }
         }
     }
-
-    file_put_contents($tempDataDir . $newId . '.jobdata', json_encode($jobData, JSON_UNESCAPED_UNICODE));
 
     $pdo->commit();
 
@@ -754,6 +752,14 @@ try {
         error_log('save_flash:  Audit-lokitus epäonnistui: ' . $e->getMessage());
     }
 
+
+    // Insert job into sf_jobs table (after commit so a failure here never rolls back the flash save)
+    try {
+        require_once __DIR__ . '/../services/FlashImageService.php';
+        FlashImageService::upsertJob($newId, $jobData);
+    } catch (Throwable $e) {
+        error_log("save_flash: Failed to create sf_jobs record for flash {$newId}: " . $e->getMessage());
+    }
 
     // Respond immediately
     $useShell = sf_shell_exec_available();
