@@ -10,6 +10,10 @@
     const DEBUG_FILTERS = false; // Set to true to enable filter debug logging
     const SCROLL_BOTTOM_THRESHOLD = 5; // px - tolerance for detecting bottom scroll (handles sub-pixel rendering)
     const DROPDOWN_RENDER_DELAY = 10; // ms - delay to ensure DOM is rendered before checking scroll
+    const SEARCH_DEBOUNCE_MS = 800; // ms - debounce delay for search input to avoid reloading on every keystroke
+
+    // Debounce timer for search inputs
+    let searchDebounceTimer = null;
 
     // ===== HELPER FUNCTIONS =====
 
@@ -401,11 +405,6 @@
                     return;
                 }
 
-                // Calculate counts for each option
-                options.items.forEach(item => {
-                    item.count = calculateResultCount(filterName, item.value);
-                });
-
                 openBottomSheet(filterName, options);
             } else {
                 // Desktop: Toggle dropdown
@@ -457,24 +456,21 @@
             const typeOptions = Array.from(filterType.options);
             options = typeOptions.map(opt => ({
                 value: opt.value,
-                label: opt.textContent,
-                count: calculateResultCount(filterName, opt.value)
+                label: opt.textContent
             }));
         } else if (filterName === 'state') {
             currentValue = filterState.value;
             const stateOptions = Array.from(filterState.options);
             options = stateOptions.map(opt => ({
                 value: opt.value,
-                label: opt.textContent,
-                count: calculateResultCount(filterName, opt.value)
+                label: opt.textContent
             }));
         } else if (filterName === 'site') {
             currentValue = filterSite.value;
             const siteOptions = Array.from(filterSite.options);
             options = siteOptions.map(opt => ({
                 value: opt.value,
-                label: opt.textContent,
-                count: calculateResultCount(filterName, opt.value)
+                label: opt.textContent
             }));
         }
 
@@ -489,13 +485,8 @@
             label.className = 'sf-chip-dropdown-label';
             label.textContent = opt.label;
 
-            const count = document.createElement('span');
-            count.className = 'sf-chip-dropdown-count';
-            count.textContent = opt.count;
-
             optEl.appendChild(radio);
             optEl.appendChild(label);
-            optEl.appendChild(count);
 
             optEl.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -512,14 +503,8 @@
                 // Close dropdown
                 chip.classList.remove('open');
 
-                // Update chip display BEFORE filtering
-                updateChipsDisplay();
-
                 // Apply filters
                 applyListFilters();
-
-                // Show toast with result count
-                showFilterResultToast();
             });
 
             dropdown.appendChild(optEl);
@@ -689,18 +674,6 @@
             option.appendChild(radio);
             option.appendChild(label);
 
-            // Calculate and show count
-            if (preset.value !== 'custom') {
-                const range = preset.getRange ? preset.getRange() : null;
-                if (range) {
-                    const count = calculateDateResultCount(range.from, range.to);
-                    const countSpan = document.createElement('span');
-                    countSpan.className = 'sf-chip-dropdown-count';
-                    countSpan.textContent = count;
-                    option.appendChild(countSpan);
-                }
-            }
-
             option.addEventListener('click', (e) => {
                 e.stopPropagation();
 
@@ -723,9 +696,6 @@
 
                 // Apply filters
                 applyListFilters();
-
-                // Show toast
-                showFilterResultToast();
             });
 
             dropdown.appendChild(option);
@@ -868,35 +838,8 @@
     }
 
     function calculateDateResultCount(from, to) {
-        const cards = document.querySelectorAll('.card');
-        let count = 0;
-
-        cards.forEach(card => {
-            let show = true;
-
-            // Apply all other current filters
-            const typeVal = filterType.value;
-            const stateVal = filterState.value;
-            const siteVal = filterSite.value;
-            const searchVal = filterSearch.value.toLowerCase().trim();
-            const archivedVal = filterArchived.value;
-
-            if (typeVal && card.dataset.type !== typeVal) show = false;
-            if (stateVal && card.dataset.state !== stateVal) show = false;
-            if (siteVal && card.dataset.site !== siteVal) show = false;
-            if (searchVal && !(card.dataset.title || '').toLowerCase().includes(searchVal)) show = false;
-            if (!shouldShowCardWithArchivedFilter(archivedVal, card)) show = false;
-
-            // Apply date filtering using helper function
-            const cardDate = card.dataset.date;
-            if (!shouldShowCardWithDateFilter(cardDate, from, to)) {
-                show = false;
-            }
-
-            if (show) count++;
-        });
-
-        return count;
+        // Not used with server-side filtering
+        return '';
     }
 
     // ===== DATE BOTTOM SHEET (MOBILE) =====
@@ -936,16 +879,6 @@
             labelDiv.appendChild(labelSpan);
             option.appendChild(labelDiv);
 
-            // Calculate and show count
-            const range = preset.getRange ? preset.getRange() : null;
-            if (range) {
-                const count = calculateDateResultCount(range.from, range.to);
-                const countSpan = document.createElement('span');
-                countSpan.className = 'sf-bottom-sheet-option-count';
-                countSpan.textContent = count;
-                option.appendChild(countSpan);
-            }
-
             option.addEventListener('click', () => {
                 // Update selection
                 bottomSheetBody.querySelectorAll('.sf-bottom-sheet-option').forEach(opt => {
@@ -967,7 +900,6 @@
                 setTimeout(() => {
                     closeBottomSheet();
                     applyListFilters();
-                    showFilterResultToast();
                 }, MOBILE_BOTTOM_SHEET_CLOSE_DELAY);
             });
 
@@ -1071,6 +1003,23 @@
 
         searchInput.addEventListener('input', function () {
             filterSearch.value = this.value;
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(applyListFilters, SEARCH_DEBOUNCE_MS);
+        });
+
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                clearTimeout(searchDebounceTimer);
+                applyListFilters();
+            }
+        });
+    }
+
+    // ===== SEARCH BUTTON =====
+    const searchBtn = document.getElementById('sf-search-btn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+            clearTimeout(searchDebounceTimer);
             applyListFilters();
         });
     }
@@ -1096,170 +1045,50 @@
         });
     }
 
-    // ===== CALCULATE RESULT COUNT =====
-    function calculateResultCount(filterName, filterValue) {
-        const cards = document.querySelectorAll('.card');
-        let count = 0;
-
-        cards.forEach(card => {
-            let show = true;
-
-            // Apply current filters except the one we're calculating for
-            if (filterName !== 'type' && filterType.value && card.dataset.type !== filterType.value) {
-                show = false;
-            }
-            if (filterName !== 'state' && filterState.value && card.dataset.state !== filterState.value) {
-                show = false;
-            }
-            if (filterName !== 'site' && filterSite.value && card.dataset.site !== filterSite.value) {
-                show = false;
-            }
-
-            // Apply the filter we're calculating for
-            if (filterName === 'type' && filterValue && card.dataset.type !== filterValue) {
-                show = false;
-            }
-            if (filterName === 'state' && filterValue && card.dataset.state !== filterValue) {
-                show = false;
-            }
-            if (filterName === 'site' && filterValue && card.dataset.site !== filterValue) {
-                show = false;
-            }
-
-            // Apply search filter (always applied)
-            const searchVal = filterSearch.value.toLowerCase().trim();
-            if (searchVal && !(card.dataset.title || '').toLowerCase().includes(searchVal)) {
-                show = false;
-            }
-
-            // Apply date filters using helper function
-            const dateFromVal = filterDateFrom.value;
-            const dateToVal = filterDateTo.value;
-            const cardDate = card.dataset.date;
-
-            if (!shouldShowCardWithDateFilter(cardDate, dateFromVal, dateToVal)) {
-                show = false;
-            }
-
-            // Archived filter - use helper function
-            if (!shouldShowCardWithArchivedFilter(filterArchived.value, card)) {
-                show = false;
-            }
-
-            if (show) count++;
-        });
-
-        return count;
-    }
-
-    // ===== APPLY FILTERS =====
+    // ===== APPLY FILTERS (server-side redirect) =====
     function applyListFilters() {
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+
         const typeVal = filterType.value;
         const stateVal = filterState.value;
         const siteVal = filterSite.value;
-        const searchVal = filterSearch.value.toLowerCase().trim();
-        const dateFromVal = filterDateFrom.value;
-        const dateToVal = filterDateTo.value;
-        const archivedVal = filterArchived.value;
+        const searchVal = filterSearch.value.trim();
+        const dateFromVal = hasDateControls ? filterDateFrom.value : '';
+        const dateToVal = hasDateControls ? filterDateTo.value : '';
+        const archivedVal = hasArchivedControl ? filterArchived.value : '';
 
-        const cards = document.querySelectorAll('.card');
-        let visibleCount = 0;
+        if (typeVal) { params.set('type', typeVal); } else { params.delete('type'); }
+        if (stateVal) { params.set('state', stateVal); } else { params.delete('state'); }
 
-        if (DEBUG_FILTERS) {
-            console.log('Applying filters:', {
-                type: typeVal,
-                state: stateVal,
-                site: siteVal,
-                search: searchVal,
-                dateFrom: dateFromVal,
-                dateTo: dateToVal,
-                archived: archivedVal,
-                totalCards: cards.length
-            });
-        }
+        // Always include 'site' so PHP distinguishes "explicit empty = all" from "missing = default worksite"
+        params.set('site', siteVal);
 
-        cards.forEach(function (card) {
-            let show = true;
+        if (searchVal) { params.set('q', searchVal); } else { params.delete('q'); }
+        if (dateFromVal) { params.set('date_from', dateFromVal); } else { params.delete('date_from'); }
+        if (dateToVal) { params.set('date_to', dateToVal); } else { params.delete('date_to'); }
+        if (archivedVal) { params.set('archived', archivedVal); } else { params.delete('archived'); }
 
-            // Type filter
-            if (typeVal && card.dataset.type !== typeVal) {
-                show = false;
-            }
+        // Reset to page 1 whenever filters change
+        params.delete('p');
 
-            // State filter
-            if (stateVal && card.dataset.state !== stateVal) {
-                show = false;
-            }
-
-            // Site filter
-            if (siteVal && card.dataset.site !== siteVal) {
-                show = false;
-            }
-
-            // Search filter (title)
-            if (searchVal && !(card.dataset.title || '').toLowerCase().includes(searchVal)) {
-                show = false;
-            }
-
-            // Date filtering using helper function
-            const cardDate = card.dataset.date;
-            if (!shouldShowCardWithDateFilter(cardDate, dateFromVal, dateToVal)) {
-                show = false;
-            }
-
-            // Debug logging (only when DEBUG_DATE_FILTER is enabled)
-            if (DEBUG_DATE_FILTER && (dateFromVal || dateToVal)) {
-                console.log('Date filter check:', {
-                    cardDate: cardDate,
-                    dateFromVal: dateFromVal,
-                    dateToVal: dateToVal,
-                    show: show
-                });
-            }
-
-            // Archived filter - use helper function
-            if (!shouldShowCardWithArchivedFilter(archivedVal, card)) {
-                show = false;
-            }
-
-            // Apply visibility
-            if (show) {
-                card.style.removeProperty('display');
-                if (show) visibleCount++;
-            } else {
-                // list.css forces display:flex !important in multiple views,
-                // so we must override with !important too.
-                card.style.setProperty('display', 'none', 'important');
-            }
-        });
-
-        if (DEBUG_FILTERS) {
-            console.log('Filters applied - visible cards:', visibleCount);
-        }
-
-        // Update chips display
-        updateChipsDisplay();
-
-        // Show "no results" message if all cards are hidden
-        updateNoResultsMessage(visibleCount);
-
-        // Update clear button visibility
-        updateClearButtonVisibility();
-
-        // Update URL
-        updateListUrl();
+        window.location.href = url.toString();
     }
 
     function updateClearButtonVisibility() {
         const clearBtn = document.getElementById('sf-clear-all-btn');
         const resetBtn = document.getElementById('sf-reset-all-btn');
 
+        // Site is only a user-applied filter when explicitly present in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const siteInUrl = urlParams.has('site');
+
         const hasFilters = filterType.value !== '' ||
             filterState.value !== '' ||
-            filterSite.value !== '' ||
+            (siteInUrl && filterSite.value !== '') ||
             filterSearch.value !== '' ||
-            filterDateFrom.value !== '' ||
-            filterDateTo.value !== '';
+            (hasDateControls && filterDateFrom.value !== '') ||
+            (hasDateControls && filterDateTo.value !== '');
 
         // Näytä/piilota napit
         if (clearBtn) {
@@ -1283,6 +1112,10 @@
         const i18n = window.SF_LIST_I18N || {};
         const currentLang = i18n.currentLang || 'fi';
         const locale = localeMap[currentLang] || 'fi-FI';
+
+        // Site chip: only "active" when site was explicitly set in URL (not just the default worksite)
+        const urlParams = new URLSearchParams(window.location.search);
+        const siteInUrl = urlParams.has('site');
 
         chips.forEach(chip => {
             const filterName = chip.dataset.filter;
@@ -1317,8 +1150,8 @@
             } else if (filterName === 'site') {
                 const currentValue = filterSite.value;
 
-                // Important: Check empty value to show "All sites" label
-                if (!currentValue) {
+                // Important: Check empty value or whether site was explicitly set in URL
+                if (!currentValue || !siteInUrl) {
                     chip.classList.remove('active');
                     const defaultLabel = i18n.filterChipSiteAll || 'Kaikki työmaat';
                     chipLabel.textContent = defaultLabel;
@@ -1327,8 +1160,8 @@
                     chipLabel.textContent = currentValue;
                 }
             } else if (filterName === 'date') {
-                const from = filterDateFrom.value;
-                const to = filterDateTo.value;
+                const from = hasDateControls ? filterDateFrom.value : '';
+                const to = hasDateControls ? filterDateTo.value : '';
 
                 if (from || to) {
                     chip.classList.add('active');
@@ -1487,17 +1320,29 @@
     filterState.addEventListener('change', applyListFilters);
     filterSite.addEventListener('change', applyListFilters);
 
-    // Kun suodatinpaneelin hakukenttää käytetään, pidä header-haku synkassa
+    // Kun suodatinpaneelin hakukenttää käytetään, pidä header-haku synkassa ja debounce
     filterSearch.addEventListener('input', function () {
         if (searchInput && searchInput.value !== filterSearch.value) {
             searchInput.value = filterSearch.value;
         }
-        applyListFilters();
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(applyListFilters, SEARCH_DEBOUNCE_MS);
     });
 
-    filterDateFrom.addEventListener('change', applyListFilters);
-    filterDateTo.addEventListener('change', applyListFilters);
-    filterArchived.addEventListener('change', applyListFilters);
+    filterSearch.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            clearTimeout(searchDebounceTimer);
+            applyListFilters();
+        }
+    });
+
+    if (hasDateControls) {
+        filterDateFrom.addEventListener('change', applyListFilters);
+        filterDateTo.addEventListener('change', applyListFilters);
+    }
+    if (hasArchivedControl) {
+        filterArchived.addEventListener('change', applyListFilters);
+    }
 
     // ===== CLEAR FILTERS =====
     if (clearBtn) {
@@ -1547,31 +1392,10 @@
         });
     }
     // ===== INITIAL LOAD =====
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasUrlFilters = urlParams.get('type') || urlParams.get('state') ||
-        urlParams.get('site') || urlParams.get('q') ||
-        urlParams.get('date_from') || urlParams.get('date_to') ||
-        urlParams.get('archived');
-
-    // Huom: kotityömaa voidaan esivalita palvelimen renderöimään selectiin
-    // ilman että sitä näkyy URL:ssa. Tällöin suodatus pitää silti ajaa
-    // client-puolella ensimmäisellä latauksella.
-    const hasEffectiveFilters =
-        hasUrlFilters ||
-        filterType.value !== '' ||
-        filterState.value !== '' ||
-        filterSite.value !== '' ||
-        filterSearch.value !== '' ||
-        filterDateFrom.value !== '' ||
-        filterDateTo.value !== '' ||
-        filterArchived.value !== '';
-
-    if (hasEffectiveFilters) {
-        applyListFilters();
-    } else {
-        // Update chips on initial load
-        updateChipsDisplay();
-    }
+    // PHP has already applied all server-side filters. Only update the UI state.
+    // Do NOT call applyListFilters() here – it would cause an infinite reload loop.
+    updateChipsDisplay();
+    updateClearButtonVisibility();
 
     // ===== SORTING FUNCTIONALITY =====
 
