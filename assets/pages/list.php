@@ -129,11 +129,15 @@ if ($site !== '') {
 
 if ($q !== '') {
     $escapedQ = addcslashes($q, '%_\\');
-    $where[]      = "(f.title LIKE :q 
-                  OR f.title_short LIKE :q 
-                  OR f.summary LIKE :q 
-                  OR f.description LIKE :q)";
-    $params[':q'] = "%" . $escapedQ . "%";
+    $where[]       = "(f.title LIKE :q1
+                   OR f.title_short LIKE :q2
+                   OR f.summary LIKE :q3
+                   OR f.description LIKE :q4)";
+    $qVal = "%" . $escapedQ . "%";
+    $params[':q1'] = $qVal;
+    $params[':q2'] = $qVal;
+    $params[':q3'] = $qVal;
+    $params[':q4'] = $qVal;
 }
 
 if ($from !== '') {
