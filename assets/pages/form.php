@@ -2245,7 +2245,18 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmBtn.disabled = true;
         optionsDiv.innerHTML = '';
 
-        var available = allLangs.filter(function(l) { return usedLangs.indexOf(l) === -1; });
+        // Re-read the currently selected language from the form (may differ from page-load value)
+        var currentLangInput = document.querySelector('input[name="lang"]:checked') ||
+                               document.querySelector('input[name="lang"]');
+        var currentLang = currentLangInput ? currentLangInput.value : usedLangs[0];
+
+        // Merge DB-used langs with the current form lang
+        var effectiveUsed = usedLangs.slice();
+        if (currentLang && effectiveUsed.indexOf(currentLang) === -1) {
+            effectiveUsed.push(currentLang);
+        }
+
+        var available = allLangs.filter(function(l) { return effectiveUsed.indexOf(l) === -1; });
 
         if (available.length === 0) {
             emptyMsg.style.display = 'block';
@@ -2315,7 +2326,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var draftResp = await fetch(form.action, { method: 'POST', body: draftData });
             var draftText = await draftResp.text();
             var draftResult = null;
-            try { draftResult = JSON.parse(draftText); } catch (_) {}
+            try { draftResult = JSON.parse(draftText); } catch (parseErr) { console.error('Draft response parse error:', parseErr); }
 
             if (!draftResult || !draftResult.ok || !draftResult.flash_id) {
                 throw new Error((draftResult && draftResult.error) ? draftResult.error : 'Tallennus epäonnistui');
@@ -2337,7 +2348,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             var bundleText = await bundleResp.text();
             var bundleResult = null;
-            try { bundleResult = JSON.parse(bundleText); } catch (_) {}
+            try { bundleResult = JSON.parse(bundleText); } catch (parseErr) { console.error('Bundle response parse error:', parseErr); }
 
             if (!bundleResult || !bundleResult.success) {
                 throw new Error((bundleResult && bundleResult.error) ? bundleResult.error : 'Kieliversion luonti epäonnistui');

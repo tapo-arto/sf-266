@@ -163,11 +163,7 @@ try {
     }
 
     // Log the event
-    if (function_exists('sf_log_event')) {
-        require_once __DIR__ . '/../includes/log.php';
-    } else {
-        require_once __DIR__ . '/../includes/log.php';
-    }
+    require_once __DIR__ . '/../includes/log.php';
     $currentUiLang = $_SESSION['ui_lang'] ?? 'fi';
     sf_log_event($newId, 'CREATED', 'Kieliversio luotu (bundle): ' . $targetLang);
 
