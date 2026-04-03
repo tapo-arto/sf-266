@@ -841,6 +841,46 @@ filter: brightness(0) invert(1);
             }
         });
 
+        // Background-render existing images that have transforms or annotations but no
+        // composited edited-data yet (e.g. after language-version creation or re-edit).
+        // This ensures the grid bitmap and preview always reflect the saved state
+        // even if the user never opens the image editor modal.
+        (async () => {
+            const existingImages = window.SF_EXISTING_IMAGES || {};
+            for (const slot of [1, 2, 3]) {
+                const editedEl = document.getElementById(`sf-image${slot}-edited-data`);
+                if (!editedEl || editedEl.value) continue; // already has composited data
+
+                const slotKey = `slot${slot}`;
+                const imgData = existingImages[slotKey];
+                if (!imgData || !imgData.url || !imgData.filename) continue; // no image
+
+                // Parse saved transform
+                const transformEl = document.getElementById(`sf-image${slot}-transform`);
+                let transformData = null;
+                try { transformData = safeJsonParse(transformEl?.value || 'null', null); } catch (e) { console.warn(`[SF] Could not parse transform for slot ${slot}:`, e); }
+
+                const annotations = getSlotAnnotations(slot);
+
+                // Only render if there is a non-default transform or at least one annotation
+                const hasNonDefault = !isDefaultTransform(transformData);
+                const hasAnnotations = annotations.length > 0;
+                if (!hasNonDefault && !hasAnnotations) continue;
+
+                if (window.SFImageEditor && typeof window.SFImageEditor.renderToDataURL === 'function') {
+                    try {
+                        const dataUrl = await window.SFImageEditor.renderToDataURL(imgData.url, transformData, annotations);
+                        if (dataUrl) {
+                            setSlotEditedDataUrl(slot, dataUrl);
+                            updateImageCardUI(slot);
+                        }
+                    } catch (e) {
+                        console.warn(`[SF] Background render failed for slot ${slot}:`, e);
+                    }
+                }
+            }
+        })();
+
         // Alku: ei valintaa -> muokkausnapit pois päältä (lähetetään editor-state eventinä)
         document.dispatchEvent(new CustomEvent('sf:editor-state', {
             detail: { tool: null, selectedId: null, selectedType: null }
