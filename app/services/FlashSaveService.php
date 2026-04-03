@@ -243,7 +243,21 @@ class FlashSaveService
         // Process grid_bitmap before database update
         $gridBitmapValue = trim((string)($data['grid_bitmap'] ?? ''));
         $gridBitmapFilename = sf_save_grid_bitmap_to_file($gridBitmapValue, $flashId);
-        
+
+        // Resolve image values: prefer library image selection over existing, if set
+        $imageMain = trim((string)($data['library_image_1'] ?? ''));
+        if ($imageMain === '') {
+            $imageMain = trim((string)($data['existing_image_1'] ?? ''));
+        }
+        $image2 = trim((string)($data['library_image_2'] ?? ''));
+        if ($image2 === '') {
+            $image2 = trim((string)($data['existing_image_2'] ?? ''));
+        }
+        $image3 = trim((string)($data['library_image_3'] ?? ''));
+        if ($image3 === '') {
+            $image3 = trim((string)($data['existing_image_3'] ?? ''));
+        }
+
         $stmt = $pdo->prepare($sql);
         $success = $stmt->execute([
             ':title' => trim((string)($data['title'] ?? '')),
@@ -259,9 +273,9 @@ class FlashSaveService
             ':root_causes' => trim((string)($data['root_causes'] ?? '')),
             ':actions' => trim((string)($data['actions'] ?? '')),
             ':annotations_data' => trim((string)($data['annotations_data'] ?? '[]')),
-            ':image_main' => trim((string)($data['existing_image_1'] ?? '')),
-            ':image_2' => trim((string)($data['existing_image_2'] ?? '')),
-            ':image_3' => trim((string)($data['existing_image_3'] ?? '')),
+            ':image_main' => $imageMain,
+            ':image_2'    => $image2,
+            ':image_3'    => $image3,
             ':image1_caption' => trim((string)($data['image1_caption'] ?? '')),
             ':image2_caption' => trim((string)($data['image2_caption'] ?? '')),
             ':image3_caption' => trim((string)($data['image3_caption'] ?? '')),
