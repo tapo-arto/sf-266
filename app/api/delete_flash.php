@@ -61,6 +61,14 @@ $flashTitle = $flash['title'] ?? '';
 // Cleanup files BEFORE deleting database record
 sf_cleanup_flash_files($pdo, $flashId);
 
+// Delete related background jobs before the flash record.
+// This is explicit defensive cleanup for environments where the
+// ON DELETE CASCADE migration (002_sf_jobs_cascade_delete.sql) has
+// not yet been applied; once it is applied the cascade handles it
+// automatically but this explicit delete is harmless.
+$stmt = $pdo->prepare('DELETE FROM sf_jobs WHERE flash_id = :flash_id');
+$stmt->execute([':flash_id' => $flashId]);
+
 // Poista tietokannasta
 $stmt = $pdo->prepare('DELETE FROM sf_flashes WHERE id = :id');
 $result = $stmt->execute([':id' => $id]);

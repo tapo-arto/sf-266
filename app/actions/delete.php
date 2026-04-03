@@ -49,6 +49,7 @@ try {
             image_2,
             image_3,
             preview_filename,
+            grid_bitmap,
             state,
             title
         FROM sf_flashes 
@@ -83,7 +84,7 @@ try {
         // Determine which rows to delete
     if ($isRoot) {
 $sel = $pdo->prepare("
-    SELECT id, image_main, image_2, image_3, preview_filename, preview_filename_2 
+    SELECT id, image_main, image_2, image_3, preview_filename, preview_filename_2, grid_bitmap
     FROM sf_flashes 
     WHERE translation_group_id = :gid1 OR id = :gid2
 ");
@@ -92,12 +93,13 @@ $sel = $pdo->prepare("
     } else {
         $toDelete = [
             [
-                'id'               => $row['id'],
-                'image_main'       => $row['image_main'] ?? null,
-                'image_2'          => $row['image_2'] ??  null,
-                'image_3'          => $row['image_3'] ?? null,
-                'preview_filename' => $row['preview_filename'] ?? null,
+                'id'                 => $row['id'],
+                'image_main'         => $row['image_main'] ?? null,
+                'image_2'            => $row['image_2'] ??  null,
+                'image_3'            => $row['image_3'] ?? null,
+                'preview_filename'   => $row['preview_filename'] ?? null,
                 'preview_filename_2' => $row['preview_filename_2'] ?? null,
+                'grid_bitmap'        => $row['grid_bitmap'] ?? null,
             ]
         ];
     }
@@ -129,6 +131,12 @@ $sel = $pdo->prepare("
 
     $ids = array_map(fn($r) => (int)$r['id'], $toDelete);
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+    // Delete related background jobs before the flash records (avoids FK conflict
+    // if the ON DELETE CASCADE migration has already been applied)
+    $jobDel = $pdo->prepare("DELETE FROM sf_jobs WHERE flash_id IN ($placeholders)");
+    $jobDel->execute($ids);
+
     $del = $pdo->prepare("DELETE FROM sf_flashes WHERE id IN ($placeholders)");
     $del->execute($ids);
 
@@ -141,10 +149,12 @@ $sel = $pdo->prepare("
     $imgDirRel  = __DIR__ . '/../../uploads/images/';
     $prevDirRel = __DIR__ . '/../../uploads/previews/';
     $imgDirAlt  = __DIR__ . '/../../img/';
+    $gridDirRel = __DIR__ . '/../../uploads/grid_bitmaps/';
 
     // Collect all unique filenames to check in batches
     $imageFilenames = [];
     $previewFilenames = [];
+    $gridFilenames = [];
     
     foreach ($toDelete as $r) {
         foreach (['image_main', 'image_2', 'image_3'] as $k) {
@@ -162,6 +172,11 @@ $sel = $pdo->prepare("
         $preview2 = $r['preview_filename_2'] ?? null;
         if ($preview2) {
             $previewFilenames[$preview2] = true;
+        }
+
+        $grid = $r['grid_bitmap'] ?? null;
+        if ($grid) {
+            $gridFilenames[$grid] = true;
         }
     }
     
@@ -188,6 +203,19 @@ $sel = $pdo->prepare("
         
         if ((int)$checkStmt->fetchColumn() === 0) {
             $safeToDeletePreviews[$fn] = true;
+        }
+    }
+
+    // Check which grid_bitmap files are safe to delete (not used by other flashes)
+    $safeToDeleteGrids = [];
+    foreach (array_keys($gridFilenames) as $fn) {
+        $checkSql = "SELECT COUNT(*) FROM sf_flashes WHERE grid_bitmap = ? AND id NOT IN ($placeholders)";
+        $checkParams = array_merge([$fn], $ids);
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->execute($checkParams);
+
+        if ((int)$checkStmt->fetchColumn() === 0) {
+            $safeToDeleteGrids[$fn] = true;
         }
     }
     
@@ -236,6 +264,20 @@ $sel = $pdo->prepare("
                 @unlink($p2);
             }
             unset($safeToDeletePreviews[$preview2]);
+        }
+
+        $grid = $r['grid_bitmap'] ?? null;
+        if ($grid && isset($safeToDeleteGrids[$grid])) {
+            // Safe to delete - no other flash uses this file
+            $p1 = $gridDirRel . $grid;
+            $p2 = __DIR__ . '/../../uploads/' . $grid;
+            if (is_file($p1)) {
+                @unlink($p1);
+            }
+            if (is_file($p2)) {
+                @unlink($p2);
+            }
+            unset($safeToDeleteGrids[$grid]);
         }
     }
 
