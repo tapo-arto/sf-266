@@ -683,7 +683,11 @@ function loadExistingFlashData() {
     // (old preview elements sfPreviewCard/sfPreviewCardGreen no longer exist after server-side preview migration)
     const baseUrl = (typeof SF_BASE_URL !== 'undefined' ? SF_BASE_URL : '').replace(/\/$/, '');
     const placeholder = `${baseUrl}/assets/img/camera-placeholder.png`;
-    const getImageUrl = (filename) => (filename ? `${baseUrl}/uploads/images/${filename}` : null);
+    const getImageUrl = (filename) => {
+        if (!filename) return null;
+        const dir = filename.startsWith('lib_') ? 'uploads/library' : 'uploads/images';
+        return `${baseUrl}/${dir}/${filename}`;
+    };
 
     // Load worksite (already selected by PHP)
     const worksiteField = getEl('sf-worksite');

@@ -209,10 +209,8 @@ window.SF_BASE_URL = <?php echo json_encode($config['base_url'] ?? ''); ?>;
 function getImageUrlForJs(filename) {
     if (! filename) return '';
     const base = window.SF_BASE_URL;
-    
-    // Tarkista uploads/images
-    // (JS ei voi tarkistaa tiedostojärjestelmää, joten oletetaan)
-    return base + '/uploads/images/' + filename;
+    const dir = filename.startsWith('lib_') ? 'library' : 'images';
+    return base + '/uploads/' + dir + '/' + filename;
 }
 
 // Kuvainfo preview-modalille

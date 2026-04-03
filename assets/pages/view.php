@@ -3929,10 +3929,10 @@ document.addEventListener('keydown', function(e) {
         if (!empty($flash[$field])) {
             $filename = $flash[$field];
             $mainImages[] = [
-                'url' => $base . '/uploads/images/' . $filename,
+                'url' => $getImageUrlForJs($filename),
                 // Main images use full-size for both URL and thumb_url since they're already optimized
                 // and don't have separate thumbnails in the uploads/images directory
-                'thumb_url' => $base . '/uploads/images/' . $filename,
+                'thumb_url' => $getImageUrlForJs($filename),
                 'isMain' => true,
                 'filename' => $filename,
                 'caption' => $flash[$meta['caption']] ?? '',
