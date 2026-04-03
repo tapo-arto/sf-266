@@ -60,7 +60,13 @@ if ($user) {
 $type         = $_GET['type']          ?? '';
 $originalType = $_GET['original_type'] ?? '';
 $state        = $_GET['state']         ?? '';
-$site         = $_GET['site']          ?? '';
+// Jos URL:ssa ei ole 'site'-parametria lainkaan, käytetään oletuksena kotityömaa-suodatusta SQL:ssä.
+// Jos URL:ssa on tyhjä 'site' (?site=), käyttäjä haluaa nähdä kaikki työmaat (ei suodatusta).
+if (!isset($_GET['site'])) {
+    $site = $homeWorksiteName; // Oletussuodatus palvelinpuolella
+} else {
+    $site = $_GET['site']; // Tyhjä = kaikki työmaat, muuten suodatetaan
+}
 $q            = trim((string)($_GET['q']    ?? ''));
 $from         = $_GET['date_from']     ?? '';
 $to           = $_GET['date_to']       ?? '';
@@ -89,10 +95,10 @@ if (!in_array($sortOrder, ['asc', 'desc'])) {
 // Tarkista onko käyttäjällä mitään suodattimia URL:ssa
 $hasAnyFilter = isset($_GET['type']) || isset($_GET['original_type']) || isset($_GET['state']) || isset($_GET['site']) || isset($_GET['q']) || isset($_GET['date_from']) || isset($_GET['date_to']) || isset($_GET['archived']);
 
-// Kotityömaata käytetään vain käyttöliittymän oletusvalintana,
-// ei palvelinpuolen SQL-rajauksena. Näin käyttäjä voi vaihtaa
-// listasuodattimesta muihin työmaihin ilman että data puuttuu.
-$autoSite = $site !== '' ? $site : $homeWorksiteName;
+// $siteIsDefault kertoo, tuliko $site URL-parametrista vai oletuksena kotityömaasta.
+// Käytetään UI-elementtien (chip aktiivisuus, clear-nappi) renderöinnissä.
+$siteIsDefault = !isset($_GET['site']);
+$autoSite = $site;
 // --- Työmaat dropdownia varten (kaikki aktiiviset työmaat) ---
 $sites = $pdo->query("SELECT name FROM sf_worksites WHERE is_active = 1 ORDER BY name ASC")
              ->fetchAll(PDO::FETCH_COLUMN);
@@ -477,7 +483,8 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
         </button>
         
         <!-- Clear filters -->
-        <button type="button" class="sf-filter-clear-btn<?= ($type === '' && $state === '' && $site === '' && $q === '' && $from === '' && $to === '' && $archived === '') ? ' hidden' : '' ?>" id="sf-clear-all-btn" title="<?= htmlspecialchars(sf_term('filter_clear_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
+        <?php $hasExplicitFilters = ($type !== '' || $state !== '' || (!$siteIsDefault && $site !== '') || $q !== '' || $from !== '' || $to !== '' || $archived !== ''); ?>
+        <button type="button" class="sf-filter-clear-btn<?= !$hasExplicitFilters ? ' hidden' : '' ?>" id="sf-clear-all-btn" title="<?= htmlspecialchars(sf_term('filter_clear_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -485,7 +492,7 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
         </button>
         
         <!-- Reset button -->
-        <button type="button" class="sf-filter-reset-btn<?= ($type === '' && $state === '' && $site === '' && $q === '' && $from === '' && $to === '' && $archived === '') ? ' hidden' : '' ?>" id="sf-reset-all-btn" title="<?= htmlspecialchars(sf_term('filter_reset', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
+        <button type="button" class="sf-filter-reset-btn<?= !$hasExplicitFilters ? ' hidden' : '' ?>" id="sf-reset-all-btn" title="<?= htmlspecialchars(sf_term('filter_reset', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                 <path d="M3 3v5h5"/>
@@ -554,9 +561,9 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
         </svg>
     </button>
 
-    <button type="button" class="sf-chip<?= $site !== '' ? ' active' : '' ?>" data-filter="site" data-value="<?= htmlspecialchars($site) ?>">
+    <button type="button" class="sf-chip<?= (!$siteIsDefault && $site !== '') ? ' active' : '' ?>" data-filter="site" data-value="<?= htmlspecialchars($site) ?>">
         <span class="chip-label">
-            <?php if ($site !== ''): ?>
+            <?php if (!$siteIsDefault && $site !== ''): ?>
                 <?= htmlspecialchars($site) ?>
             <?php else: ?>
                 <?= htmlspecialchars(sf_term('filter_chip_site_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
@@ -1588,7 +1595,7 @@ document.addEventListener('change', function (e) {
         const hasFilters = <?= json_encode(
             $type !== '' ||
             $state !== '' ||
-            ($site !== '' && $site !== $homeWorksiteName) ||
+            (!$siteIsDefault && $site !== '') ||
             $q !== '' ||
             $from !== '' ||
             $to !== ''
