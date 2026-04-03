@@ -5167,3 +5167,114 @@ jne.
         line-height: 1;
     }
 }
+/* ===== PAGINATION ===== */
+.sf-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 16px 8px;
+    flex-wrap: wrap;
+}
+
+.sf-page-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sf-page-btn:hover:not(.disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.sf-page-btn.disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+}
+
+.sf-page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sf-page-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 6px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.sf-page-num:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.sf-page-num.active {
+    background: #fee000;
+    border-color: #fee000;
+    color: #111827;
+    font-weight: 700;
+    cursor: default;
+    pointer-events: none;
+}
+
+.sf-page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    font-size: 14px;
+    color: #9ca3af;
+    user-select: none;
+}
+
+.sf-page-info {
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+@media (max-width: 540px) {
+    .sf-pagination {
+        gap: 6px;
+        padding: 20px 8px 8px;
+    }
+
+    .sf-page-btn span {
+        display: none;
+    }
+
+    .sf-page-btn {
+        padding: 8px 10px;
+    }
+
+    .sf-page-info {
+        order: -1;
+        width: 100%;
+        text-align: center;
+    }
+}
