@@ -66,6 +66,11 @@ $from         = $_GET['date_from']     ?? '';
 $to           = $_GET['date_to']       ?? '';
 $archived     = $_GET['archived']      ?? '';
 
+// Pagination
+$perPage     = 30;
+$currentPage = max(1, (int)($_GET['p'] ?? 1));
+$offset      = ($currentPage - 1) * $perPage;
+
 // Sorting parameters
 $sortField = $_GET['sort']  ?? 'created';
 $sortOrder = $_GET['order'] ?? 'desc';
@@ -166,44 +171,128 @@ if ($currentUserId > 0) {
     }
 }
 
-$sql = "SELECT f.*,
-        DATE_FORMAT(f.occurred_at, '%d.%m.%Y %H:%i') AS occurredFmt,
-        DATE_FORMAT(f.updated_at, '%d.%m.%Y %H:%i') AS updatedFmt,
-        (SELECT COUNT(*) 
-         FROM safetyflash_logs sl 
-         WHERE sl.flash_id = COALESCE(f.translation_group_id, f.id)
-           AND sl.event_type = 'comment_added'
-           AND sl.created_at > GREATEST(
-               COALESCE(
-                   (SELECT last_read_at FROM sf_flash_reads r 
-                    WHERE r.flash_id = COALESCE(f.translation_group_id, f.id) 
-                      AND r.user_id = :current_user_id),
-                   '1970-01-01 00:00:00'
-               ),
-               :current_user_created_at,
-               DATE_SUB(NOW(), INTERVAL 7 DAY)
-           )
-        ) AS new_comment_count
-        FROM sf_flashes f";
+// --- Role-based visibility (SQL) ---
+// Replaces the PHP-level visibility filter. Admin sees everything; others see
+// only flashes they have access to based on state and role.
+$roleId   = $user ? (int)$user['role_id'] : 0;
+$isSafety = $roleId === 3;
+$isComms  = $roleId === 4;
 
-// Sisällytä kaikki kortit, mukaan lukien prosessoinnissa olevat
-// Piilotus tehdään frontendissä CSS:llä
-$processingFilter = "1"; // SQL: always true (include all)
-if ($where) {
-    $sql .= " WHERE " . implode(" AND ", $where) . " AND " . $processingFilter;
-} else {
-    $sql .= " WHERE " . $processingFilter;
+if (!$isAdmin) {
+    $isSafetyInt = $isSafety ? 1 : 0;  // 0 or 1 — safe to inline; not user-supplied
+    $isCommsInt  = $isComms  ? 1 : 0;  // 0 or 1
+
+    // JSON_CONTAINS requires its second argument to be a valid JSON document.
+    // Passing the user ID as a decimal string (e.g. "5") represents the JSON
+    // integer 5, which matches numeric values stored in the JSON array.
+    $where[] = "(
+        f.state = 'published'
+        OR f.created_by = :vis_uid
+        OR ({$isSafetyInt} = 1 AND f.state != 'draft')
+        OR ({$isCommsInt} = 1 AND f.state = 'to_comms')
+        OR (
+            f.state = 'pending_supervisor'
+            AND f.selected_approvers IS NOT NULL
+            AND JSON_VALID(f.selected_approvers)
+            AND (
+                JSON_CONTAINS(f.selected_approvers, :vis_uid_json)
+                OR (
+                    JSON_TYPE(JSON_EXTRACT(f.selected_approvers, '$.approver_ids')) = 'ARRAY'
+                    AND JSON_CONTAINS(JSON_EXTRACT(f.selected_approvers, '$.approver_ids'), :vis_uid_json2)
+                )
+            )
+        )
+    )";
+
+    $params[':vis_uid']       = $currentUserId;
+    // Cast to string so PDO does not add quotes around the value; MySQL then
+    // interprets the string '5' as the JSON integer 5.
+    $params[':vis_uid_json']  = (string)$currentUserId;
+    $params[':vis_uid_json2'] = (string)$currentUserId;
 }
 
-$sql .= " ORDER BY f.created_at DESC LIMIT 1000";
+// --- Sort field mapping ---
+$sortColumnMap = [
+    'created'  => 'f.created_at',
+    'occurred' => 'f.occurred_at',
+    'updated'  => 'f.updated_at',
+];
+$sortColumn  = $sortColumnMap[$sortField] ?? 'f.created_at';
+$sortDirSQL  = $sortOrder === 'asc' ? 'ASC' : 'DESC';
 
-// Add current user data to params for unread comments calculation
-$params[':current_user_id'] = $currentUserId;
-$params[':current_user_created_at'] = $currentUserCreatedAt;
+$whereSql = $where ? ("WHERE " . implode(" AND ", $where)) : "";
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$fetched = $stmt->fetchAll();
+// --- Step 1: Count distinct visible groups ---
+$countSql = "SELECT COUNT(*) FROM (
+    SELECT COALESCE(f.translation_group_id, f.id) AS group_id
+    FROM sf_flashes f
+    {$whereSql}
+    GROUP BY COALESCE(f.translation_group_id, f.id)
+) AS g";
+
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($params);
+$totalGroups = (int)$countStmt->fetchColumn();
+$totalPages  = max(1, (int)ceil($totalGroups / $perPage));
+// Clamp current page
+if ($currentPage > $totalPages) {
+    $currentPage = $totalPages;
+    $offset      = ($currentPage - 1) * $perPage;
+}
+
+// --- Step 2: Fetch paginated group IDs in sort order ---
+// LIMIT/OFFSET cannot be bound as parameters with native prepared statements
+// (EMULATE_PREPARES=false). Both values are strictly cast to int above.
+$groupIdSql = "SELECT COALESCE(f.translation_group_id, f.id) AS group_id,
+                      MAX({$sortColumn}) AS sort_val
+               FROM sf_flashes f
+               {$whereSql}
+               GROUP BY COALESCE(f.translation_group_id, f.id)
+               ORDER BY sort_val {$sortDirSQL}
+               LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;
+
+$groupIdStmt = $pdo->prepare($groupIdSql);
+$groupIdStmt->execute($params);
+$groupIdRows  = $groupIdStmt->fetchAll();
+$groupIdsList = array_column($groupIdRows, 'group_id');
+
+// --- Step 3: Fetch all flash rows for the paginated groups ---
+$fetched = [];
+if (!empty($groupIdsList)) {
+    $placeholders = implode(',', array_fill(0, count($groupIdsList), '?'));
+    $dataSql = "SELECT f.*,
+                DATE_FORMAT(f.occurred_at, '%d.%m.%Y %H:%i') AS occurredFmt,
+                DATE_FORMAT(f.updated_at, '%d.%m.%Y %H:%i') AS updatedFmt,
+                (SELECT COUNT(*)
+                 FROM safetyflash_logs sl
+                 WHERE sl.flash_id = COALESCE(f.translation_group_id, f.id)
+                   AND sl.event_type = 'comment_added'
+                   AND sl.created_at > GREATEST(
+                       COALESCE(
+                           (SELECT last_read_at FROM sf_flash_reads r
+                            WHERE r.flash_id = COALESCE(f.translation_group_id, f.id)
+                              AND r.user_id = ?),
+                           '1970-01-01 00:00:00'
+                       ),
+                       ?,
+                       DATE_SUB(NOW(), INTERVAL 7 DAY)
+                   )
+                ) AS new_comment_count
+                FROM sf_flashes f
+                WHERE COALESCE(f.translation_group_id, f.id) IN ({$placeholders})";
+
+    $dataStmt = $pdo->prepare($dataSql);
+    // $dataParams intentionally omits the filter params from $params because
+    // the data query's WHERE clause only references group IDs (already filtered
+    // in Step 2). The only additional params needed are for the unread-comment
+    // correlated subquery (current_user_id and current_user_created_at).
+    $dataParams = array_merge(
+        [$currentUserId, $currentUserCreatedAt],
+        array_map('intval', $groupIdsList)
+    );
+    $dataStmt->execute($dataParams);
+    $fetched = $dataStmt->fetchAll();
+}
 
 // Hae prosessoinnissa olevat flashit (vain polling-dataa varten, ei näytetä kortteja)
 $processingFlashes = [];
@@ -248,9 +337,11 @@ $langLabels = [
     'el' => 'EL'
 ];
 
-$rows = [];
+// Build one representative row per group (preferred language or highest-priority state).
+// Then restore the SQL sort order that was determined by the paginated group ID query.
+$rowsByGroup = [];
 foreach ($groups as $gid => $items) {
-    // STEP 1: Try to find a version in user's preferred language
+    // Try to find a version in user's preferred language
     $preferredVersion = null;
     foreach ($items as $item) {
         if (($item['lang'] ?? DEFAULT_LANG) === $userLang) {
@@ -258,106 +349,29 @@ foreach ($groups as $gid => $items) {
             break;
         }
     }
-    
-    // STEP 2: If found in user's language, use it
+
     if ($preferredVersion !== null) {
-        $rows[] = $preferredVersion;
+        $rowsByGroup[$gid] = $preferredVersion;
         continue;
     }
-    
-    // STEP 3: Fall back to highest priority state (original behavior)
+
+    // Fall back to highest priority state
     usort($items, function($a, $b) use ($statePriority, $defaultPriority) {
         $pa = $statePriority[$a['state']] ?? $defaultPriority;
         $pb = $statePriority[$b['state']] ?? $defaultPriority;
         if ($pa !== $pb) return $pb <=> $pa;
         return strtotime($b['created_at'] ?? 0) <=> strtotime($a['created_at'] ?? 0);
     });
-    $rows[] = $items[0];
+    $rowsByGroup[$gid] = $items[0];
 }
 
-// --- NÄKYVYYSLOGIIKKA: roolien mukaan ---
-
-$currentUserId = $user ? (int)$user['id'] : 0;
-$roleId        = $user ? (int)$user['role_id'] : 0;
-
-// 1 = Pääkäyttäjä, 2 = Kirjoittaja, 3 = Turvatiimi, 4 = Viestintä
-$ROLE_ADMIN  = 1;
-$ROLE_WRITER = 2;
-$ROLE_SAFETY = 3;
-$ROLE_COMMS  = 4;
-
-$visibleRows = [];
-
-foreach ($rows as $r) {
-    $stateVal  = $r['state'];
-    $createdBy = (int)($r['created_by'] ?? 0);
-
-    $isOwner     = $currentUserId > 0 && $createdBy === $currentUserId;
-    $isSafety    = $roleId === $ROLE_SAFETY;
-    $isComms     = $roleId === $ROLE_COMMS;
-    $isAdminRole = $roleId === $ROLE_ADMIN;
-
-    // Onko käyttäjä valittu työmaavastaavaksi (selected_approvers JSON: [1,2,3] tai {"approver_ids":[...]} tms.)
-    $isSelectedSupervisor = false;
-    $sel = $r['selected_approvers'] ?? null;
-    if ($currentUserId > 0 && $sel) {
-        $decoded = json_decode((string)$sel, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            if (is_array($decoded)) {
-                // hyväksy sekä [1,2] että {'approver_ids':[1,2]} muodot
-                if (isset($decoded['approver_ids']) && is_array($decoded['approver_ids'])) {
-                    $decoded = $decoded['approver_ids'];
-                }
-                $ids = array_map('intval', $decoded);
-                $isSelectedSupervisor = in_array($currentUserId, $ids, true);
-            }
-        }
-    }
-
-    $visible = false;
-
-    if ($isAdminRole) {
-        $visible = true;
-    } else {
-        switch ($stateVal) {
-            case 'draft':
-                $visible = $isOwner;
-                break;
-
-            // Työmaavastaavan tarkistus: näkyy tekijälle + valitulle työmaavastaavalle + turvatiimille
-            case 'pending_supervisor':
-                $visible = $isOwner || $isSelectedSupervisor || $isSafety;
-                break;
-
-            case 'pending_review':
-            case 'request_info':
-                $visible = $isOwner || $isSafety;
-                break;
-
-            case 'to_comms':
-                $visible = $isOwner || $isSafety || $isComms;
-                break;
-
-            case 'published':
-                $visible = true;
-                break;
-
-            default:
-                $visible = $isOwner || $isSafety;
-                break;
-        }
-    }
-
-    if ($visible) {
-        $visibleRows[] = $r;
+// Restore SQL sort order from $groupIdsList
+$rows = [];
+foreach ($groupIdsList as $gid) {
+    if (isset($rowsByGroup[(int)$gid])) {
+        $rows[] = $rowsByGroup[(int)$gid];
     }
 }
-
-usort($visibleRows, function($a, $b) {
-    return strtotime($b['created_at'] ?? 0) <=> strtotime($a['created_at'] ?? 0);
-});
-
-$rows = $visibleRows;
 
 // Helpers
 function typeBadgeClass($t) {
@@ -1213,6 +1227,88 @@ $allTranslations = sf_get_all_translations($pdo, array_values($allGroupIds));
 </div> <!-- .cards-container -->
 </div> <!-- .skeleton-wrapper -->
 </div> <!-- .sf-list-container -->
+
+<?php if ($totalPages > 1): ?>
+<?php
+// Build base query params for pagination links (preserve all active filters)
+$paginationBase = $_GET;
+unset($paginationBase['p']);
+
+function sf_pagination_url(array $base, int $page): string {
+    $p = $base;
+    if ($page > 1) {
+        $p['p'] = $page;
+    }
+    return '?' . http_build_query($p);
+}
+
+// Determine page window (show at most 5 page numbers around current page)
+$windowSize  = 2; // pages on each side of current
+$pageStart   = max(1, $currentPage - $windowSize);
+$pageEnd     = min($totalPages, $currentPage + $windowSize);
+?>
+<nav class="sf-pagination" aria-label="<?= htmlspecialchars(sf_term('pagination_page', $currentUiLang) . ' ' . $currentPage . ' ' . sf_term('pagination_of', $currentUiLang) . ' ' . $totalPages, ENT_QUOTES, 'UTF-8') ?>">
+    <?php if ($currentPage > 1): ?>
+        <a href="<?= htmlspecialchars(sf_pagination_url($paginationBase, $currentPage - 1), ENT_QUOTES, 'UTF-8') ?>"
+           class="sf-page-btn sf-page-prev"
+           aria-label="<?= htmlspecialchars(sf_term('pagination_prev', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            <span><?= htmlspecialchars(sf_term('pagination_prev', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
+        </a>
+    <?php else: ?>
+        <span class="sf-page-btn sf-page-prev disabled" aria-disabled="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            <span><?= htmlspecialchars(sf_term('pagination_prev', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
+        </span>
+    <?php endif; ?>
+
+    <div class="sf-page-numbers">
+        <?php if ($pageStart > 1): ?>
+            <a href="<?= htmlspecialchars(sf_pagination_url($paginationBase, 1), ENT_QUOTES, 'UTF-8') ?>" class="sf-page-num">1</a>
+            <?php if ($pageStart > 2): ?>
+                <span class="sf-page-ellipsis">&hellip;</span>
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <?php for ($p = $pageStart; $p <= $pageEnd; $p++): ?>
+            <?php if ($p === $currentPage): ?>
+                <span class="sf-page-num active" aria-current="page"><?= $p ?></span>
+            <?php else: ?>
+                <a href="<?= htmlspecialchars(sf_pagination_url($paginationBase, $p), ENT_QUOTES, 'UTF-8') ?>" class="sf-page-num"><?= $p ?></a>
+            <?php endif; ?>
+        <?php endfor; ?>
+
+        <?php if ($pageEnd < $totalPages): ?>
+            <?php if ($pageEnd < $totalPages - 1): ?>
+                <span class="sf-page-ellipsis">&hellip;</span>
+            <?php endif; ?>
+            <a href="<?= htmlspecialchars(sf_pagination_url($paginationBase, $totalPages), ENT_QUOTES, 'UTF-8') ?>" class="sf-page-num"><?= $totalPages ?></a>
+        <?php endif; ?>
+    </div>
+
+    <span class="sf-page-info">
+        <?= htmlspecialchars(sf_term('pagination_page', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        <?= $currentPage ?>
+        <?= htmlspecialchars(sf_term('pagination_of', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        <?= $totalPages ?>
+    </span>
+
+    <?php if ($currentPage < $totalPages): ?>
+        <a href="<?= htmlspecialchars(sf_pagination_url($paginationBase, $currentPage + 1), ENT_QUOTES, 'UTF-8') ?>"
+           class="sf-page-btn sf-page-next"
+           aria-label="<?= htmlspecialchars(sf_term('pagination_next', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
+            <span><?= htmlspecialchars(sf_term('pagination_next', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+    <?php else: ?>
+        <span class="sf-page-btn sf-page-next disabled" aria-disabled="true">
+            <span><?= htmlspecialchars(sf_term('pagination_next', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </span>
+    <?php endif; ?>
+</nav>
+<?php endif; ?>
+
 <?php if ($isAdmin): ?>
 <!-- POISTOVAHVISTUS-MODAALI -->
 <div class="sf-modal hidden" id="modalBulkDelete" role="dialog" aria-modal="true">
