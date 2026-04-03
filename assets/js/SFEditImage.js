@@ -1227,6 +1227,115 @@ window.SFImageEditor = (() => {
         }
     }
 
+    // Shared helper: draw annotations onto any 2D context
+    function _drawAnnotationsOnCtx(ctx, anns) {
+        if (!anns || !anns.length) return;
+
+        anns.forEach(a => {
+            if (!a) return;
+
+            // --- TEXT ---
+            if (a.type === 'text') {
+                ctx.save();
+
+                const text = String(a.text || '').replace(/\r\n/g, '\n');
+                if (!text.trim()) { ctx.restore(); return; }
+
+                const x = Number(a.x ?? 0);
+                const y = Number(a.y ?? 0);
+
+                const fontSize = Number(a.size || 32);
+                const fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+                ctx.font = `700 ${fontSize}px ${fontFamily}`;
+                ctx.textBaseline = 'top';
+
+                const padX = 12;
+                const padY = 10;
+                const radius = 12;
+                const maxWidth = 980;
+
+                const rawLines = text.split('\n');
+                const lines = [];
+                rawLines.forEach((ln) => {
+                    const words = String(ln).split(/\s+/).filter(Boolean);
+                    if (!words.length) { lines.push(''); return; }
+                    let line = words[0];
+                    for (let i = 1; i < words.length; i++) {
+                        const test = line + ' ' + words[i];
+                        const w = ctx.measureText(test).width;
+                        if (w > maxWidth && line.length) {
+                            lines.push(line);
+                            line = words[i];
+                        } else {
+                            line = test;
+                        }
+                    }
+                    lines.push(line);
+                });
+
+                const lineH = Math.round(fontSize * 1.25);
+                const textW = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
+                const textH = Math.max(1, lines.length) * lineH;
+                const boxW = Math.min(maxWidth, textW) + padX * 2;
+                const boxH = textH + padY * 2;
+                const bx = x;
+                const by = y;
+
+                // Improved background style - less transparent, more polished
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+
+                const rr = (r, w, h) => Math.max(0, Math.min(r, Math.min(w, h) / 2));
+                const r = rr(radius, boxW, boxH);
+
+                ctx.beginPath();
+                ctx.moveTo(bx + r, by);
+                ctx.arcTo(bx + boxW, by, bx + boxW, by + boxH, r);
+                ctx.arcTo(bx + boxW, by + boxH, bx, by + boxH, r);
+                ctx.arcTo(bx, by + boxH, bx, by, r);
+                ctx.arcTo(bx, by, bx + boxW, by, r);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // White text with shadow for better readability
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+
+                let ty = by + padY;
+                lines.forEach((l) => {
+                    ctx.fillText(l, bx + padX, ty);
+                    ty += lineH;
+                });
+
+                ctx.restore();
+                return;
+            }
+
+            // --- ICON ---
+            if (a.type === 'icon') {
+                const tool = a.tool;
+                const size = Number(a.size || 140);
+                const ax = Number(a.x || 0);
+                const ay = Number(a.y || 0);
+                const rot = Number(a.rot || 0);
+
+                const im = iconCache[tool];
+                if (im && im.complete) {
+                    ctx.save();
+                    ctx.translate(ax, ay);
+                    if (rot) ctx.rotate((rot * Math.PI) / 180);
+                    ctx.drawImage(im, -size / 2, -size / 2, size, size);
+                    ctx.restore();
+                }
+            }
+        });
+    }
+
     function drawForExport(exportCtx, exportCanvas) {
         // Käytetään samaa logiikkaa kuin draw(), mutta EI piirretä turvaviivoja
         if (!exportCanvas || !exportCtx) return;
@@ -1256,111 +1365,78 @@ window.SFImageEditor = (() => {
         }
 
         // annotations (EI turvaviivoja)
-        if (annotations && annotations.length) {
-            annotations.forEach(a => {
-                if (!a) return;
+        _drawAnnotationsOnCtx(exportCtx, annotations);
+    }
 
-                // --- TEXT ---
-                if (a.type === 'text') {
-                    exportCtx.save();
+    /**
+     * Renders an image with transform and annotations to a data URL using an
+     * offscreen canvas. Does not affect the visible editor state.
+     *
+     * @param {string} src - Image URL to render
+     * @param {object|null} transformData - {x, y, scale, rotation}
+     * @param {Array} annotationsArr - Array of annotation objects
+     * @returns {Promise<string>} Resolves to a PNG data URL, or '' on failure
+     */
+    function renderToDataURL(src, transformData, annotationsArr) {
+        return new Promise((resolve) => {
+            if (!src || typeof src !== 'string') { resolve(''); return; }
 
-                    const text = String(a.text || '').replace(/\r\n/g, '\n');
-                    if (!text.trim()) { exportCtx.restore(); return; }
+            // Reject javascript: URIs to prevent script injection via image URL
+            if (/^javascript:/i.test(src.trim())) { resolve(''); return; }
 
-                    const x = Number(a.x ?? 0);
-                    const y = Number(a.y ?? 0);
+            const anns = Array.isArray(annotationsArr) ? annotationsArr.filter(Boolean) : [];
 
-                    const fontSize = Number(a.size || 32);
-                    const fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
-                    exportCtx.font = `700 ${fontSize}px ${fontFamily}`;
-                    exportCtx.textBaseline = 'top';
+            // Pre-load any icons referenced in annotations before drawing
+            const iconTools = [...new Set(
+                anns.filter(a => a.type === 'icon' && iconFiles[a.tool]).map(a => a.tool)
+            )];
+            const iconPromises = iconTools.map(tool =>
+                new Promise(res => _ensureIcon(tool, () => res()))
+            );
 
-                    const padX = 12;
-                    const padY = 10;
-                    const radius = 12;
-                    const maxWidth = 980;
+            const image = new Image();
+            image.onload = () => {
+                Promise.all(iconPromises).then(() => {
+                    const oc = document.createElement('canvas');
+                    oc.width = CANVAS_W;
+                    oc.height = CANVAS_H;
+                    const ctx = oc.getContext('2d');
 
-                    const rawLines = text.split('\n');
-                    const lines = [];
-                    rawLines.forEach((ln) => {
-                        const words = String(ln).split(/\s+/).filter(Boolean);
-                        if (!words.length) { lines.push(''); return; }
-                        let line = words[0];
-                        for (let i = 1; i < words.length; i++) {
-                            const test = line + ' ' + words[i];
-                            const w = exportCtx.measureText(test).width;
-                            if (w > maxWidth && line.length) {
-                                lines.push(line);
-                                line = words[i];
-                            } else {
-                                line = test;
-                            }
-                        }
-                        lines.push(line);
-                    });
+                    const t = {
+                        x: Number(transformData?.x ?? 0),
+                        y: Number(transformData?.y ?? 0),
+                        scale: Number(transformData?.scale ?? 1),
+                        rotation: Number(transformData?.rotation ?? 0)
+                    };
 
-                    const lineH = Math.round(fontSize * 1.25);
-                    const textW = Math.max(0, ...lines.map(l => exportCtx.measureText(l).width));
-                    const textH = Math.max(1, lines.length) * lineH;
-                    const boxW = Math.min(maxWidth, textW) + padX * 2;
-                    const boxH = textH + padY * 2;
-                    const bx = x;
-                    const by = y;
+                    ctx.fillStyle = '#fafafa';
+                    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-                    // Improved background style - less transparent, more polished
-                    exportCtx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-                    exportCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-                    exportCtx.lineWidth = 1;
-
-                    const rr = (r, w, h) => Math.max(0, Math.min(r, Math.min(w, h) / 2));
-                    const r = rr(radius, boxW, boxH);
-
-                    exportCtx.beginPath();
-                    exportCtx.moveTo(bx + r, by);
-                    exportCtx.arcTo(bx + boxW, by, bx + boxW, by + boxH, r);
-                    exportCtx.arcTo(bx + boxW, by + boxH, bx, by + boxH, r);
-                    exportCtx.arcTo(bx, by + boxH, bx, by, r);
-                    exportCtx.arcTo(bx, by, bx + boxW, by, r);
-                    exportCtx.closePath();
-                    exportCtx.fill();
-                    exportCtx.stroke();
-
-                    // White text with shadow for better readability
-                    exportCtx.fillStyle = '#ffffff';
-                    exportCtx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-                    exportCtx.shadowBlur = 3;
-                    exportCtx.shadowOffsetX = 1;
-                    exportCtx.shadowOffsetY = 1;
-
-                    let ty = by + padY;
-                    lines.forEach((l) => {
-                        exportCtx.fillText(l, bx + padX, ty);
-                        ty += lineH;
-                    });
-
-                    exportCtx.restore();
-                    return;
-                }
-
-                // --- ICON ---
-                if (a.type === 'icon') {
-                    const tool = a.tool;
-                    const size = Number(a.size || 140);
-                    const ax = Number(a.x || 0);
-                    const ay = Number(a.y || 0);
-                    const rot = Number(a.rot || 0);
-
-                    const im = iconCache[tool];
-                    if (im && im.complete) {
-                        exportCtx.save();
-                        exportCtx.translate(ax, ay);
-                        if (rot) exportCtx.rotate((rot * Math.PI) / 180);
-                        exportCtx.drawImage(im, -size / 2, -size / 2, size, size);
-                        exportCtx.restore();
+                    // Draw image with saved transform
+                    ctx.save();
+                    ctx.translate(t.x, t.y);
+                    ctx.scale(t.scale, t.scale);
+                    if (t.rotation !== 0) {
+                        ctx.translate(image.width / 2, image.height / 2);
+                        ctx.rotate((t.rotation * Math.PI) / 180);
+                        ctx.translate(-image.width / 2, -image.height / 2);
                     }
-                }
-            });
-        }
+                    ctx.drawImage(image, 0, 0);
+                    ctx.restore();
+
+                    // Draw annotations using shared helper
+                    _drawAnnotationsOnCtx(ctx, anns);
+
+                    try {
+                        resolve(oc.toDataURL('image/png'));
+                    } catch (e) {
+                        resolve('');
+                    }
+                });
+            };
+            image.onerror = () => resolve('');
+            image.src = src;
+        });
     }
 
     function getAllAnnotations() {
@@ -1403,7 +1479,7 @@ window.SFImageEditor = (() => {
         zoom, nudge, resetFit,
         rotateImage, rotateImageLeft, rotateImageRight,
         getState, setState, save,
-        drawForExport,
+        drawForExport, renderToDataURL,
         getAllAnnotations
     };
 })();
