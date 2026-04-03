@@ -149,6 +149,10 @@
                         const hiddenInput = document.getElementById('sfLibraryImage' + slot);
                         if (hiddenInput) hiddenInput.value = '';
 
+                        // Tyhjennä kuvapankki-valinta muistista
+                        if (!window.SF_LIBRARY_SELECTIONS) window.SF_LIBRARY_SELECTIONS = {};
+                        window.SF_LIBRARY_SELECTIONS[slot] = 0;
+
                         const thumb = document.getElementById('sfImageThumb' + slot);
                         if (thumb) thumb.src = thumb.dataset.placeholder || '';
 
@@ -163,6 +167,10 @@
         openModal: function (slot) {
             this.currentSlot = slot;
             this.selectedImage = null;
+
+            // Hae aiemmin valittu kuvapankin kuva tätä slottia varten
+            const selections = window.SF_LIBRARY_SELECTIONS || {};
+            this.preSelectedId = selections[slot] || 0;
 
             const modal = document.getElementById('sfImageLibraryModal');
             if (modal) {
@@ -252,6 +260,19 @@
                 item.addEventListener('click', () => self.selectImage(img, item));
                 grid.appendChild(item);
             });
+
+            // Palauta aiemmin valittu kuva (muokkaustila ja saman session valinnat)
+            if (self.preSelectedId) {
+                const preSelectedItem = grid.querySelector('[data-id="' + self.preSelectedId + '"]');
+                if (preSelectedItem) {
+                    const preImg = images.find(function (i) { return i.id === self.preSelectedId; });
+                    if (preImg) {
+                        preSelectedItem.classList.add('selected');
+                        self.selectedImage = preImg;
+                        self.updateSelectedInfo();
+                    }
+                }
+            }
         },
 
         selectImage: function (image, element) {
@@ -298,6 +319,11 @@
 
             const fileInput = document.getElementById('sf-image' + slot);
             if (fileInput) fileInput.value = '';
+
+            // Päivitä valitun kuvan ID muistiin (käytetään modaalin palautuksessa)
+            if (!window.SF_LIBRARY_SELECTIONS) window.SF_LIBRARY_SELECTIONS = {};
+            window.SF_LIBRARY_SELECTIONS[slot] = image.id;
+            this.preSelectedId = image.id;
 
             this.updatePreview(slot, this.resolveImageUrl(image.url));
 

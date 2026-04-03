@@ -205,7 +205,7 @@ $image3_transform = $flash['image3_transform'] ?? '';
 // initial step param (optional)
 $initialStep = isset($_GET['step']) ? (int) $_GET['step'] : 1;
 
-// Kuvapolku muokkaustilassa
+// Kuvapolku muokkaustilassa (tarkistaa myös kuvapankki-hakemiston)
 $getImageUrl = function ($filename) use ($base) {
     $filename = is_string($filename) ? basename($filename) : '';
     if (empty($filename)) {
@@ -215,12 +215,41 @@ $getImageUrl = function ($filename) use ($base) {
     if (file_exists(__DIR__ . "/../../{$path}")) {
         return "{$base}/{$path}";
     }
+    $libraryPath = "uploads/library/{$filename}";
+    if (file_exists(__DIR__ . "/../../{$libraryPath}")) {
+        return "{$base}/{$libraryPath}";
+    }
     $oldPath = "img/{$filename}";
     if (file_exists(__DIR__ . "/../../{$oldPath}")) {
         return "{$base}/{$oldPath}";
     }
     return "{$base}/assets/img/camera-placeholder.png";
 };
+
+// Hae kuvapankin kuvien ID:t muokkaustilaa varten (UI-valinnan palautus)
+$libraryImageIds = [1 => 0, 2 => 0, 3 => 0];
+if ($editing) {
+    $slotFilenames = [
+        1 => $flash['image_main'] ?? '',
+        2 => $flash['image_2'] ?? '',
+        3 => $flash['image_3'] ?? '',
+    ];
+    foreach ($slotFilenames as $slot => $filename) {
+        if ($filename !== '' && strpos($filename, 'lib_') === 0) {
+            try {
+                $libRow = Database::fetchOne(
+                    "SELECT id FROM sf_image_library WHERE filename = :filename LIMIT 1",
+                    [':filename' => $filename]
+                );
+                if ($libRow) {
+                    $libraryImageIds[$slot] = (int)$libRow['id'];
+                }
+            } catch (Throwable $e) {
+                error_log('form.php library image lookup error: ' . $e->getMessage());
+            }
+        }
+    }
+}
 ?>
 <?php if ($hasDrafts && !$editing): ?>
 <div id="sfDraftRecoveryOverlay" class="sf-draft-overlay">
@@ -1217,6 +1246,27 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
     value="<?= htmlspecialchars($flash['image_3'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
   >
 
+  <!-- Piilotetut kuvapankki-kentät: täytetään JS:ssä kun kuva valitaan pankista,
+       muokkaustilassa esitäytetään jos kuva on peräisin kuvapankista -->
+  <input
+    type="hidden"
+    id="sfLibraryImage1"
+    name="library_image_1"
+    value="<?= ($editing && strpos($flash['image_main'] ?? '', 'lib_') === 0) ? htmlspecialchars($flash['image_main'], ENT_QUOTES, 'UTF-8') : '' ?>"
+  >
+  <input
+    type="hidden"
+    id="sfLibraryImage2"
+    name="library_image_2"
+    value="<?= ($editing && strpos($flash['image_2'] ?? '', 'lib_') === 0) ? htmlspecialchars($flash['image_2'], ENT_QUOTES, 'UTF-8') : '' ?>"
+  >
+  <input
+    type="hidden"
+    id="sfLibraryImage3"
+    name="library_image_3"
+    value="<?= ($editing && strpos($flash['image_3'] ?? '', 'lib_') === 0) ? htmlspecialchars($flash['image_3'], ENT_QUOTES, 'UTF-8') : '' ?>"
+  >
+
   <!-- Piilotetut editoidut kuvat (dataURL) - täytetään kuvaeditorissa -->
   <input
     type="hidden"
@@ -1645,6 +1695,7 @@ window.SF_I18N = <?= json_encode(array_merge($sfI18n, [
     'changes_saved' => sf_term('changes_saved', $uiLang),
 ]), JSON_UNESCAPED_UNICODE) ?>;
 window.SF_BASE_URL = "<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>";
+window.SF_LIBRARY_SELECTIONS = <?= json_encode($libraryImageIds, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <script src="<?= sf_asset_url('assets/js/SFEditImage.js', $base) ?>"></script>
 <script src="<?= sf_asset_url('assets/js/sf-image-edit-flow.js', $base) ?>"></script>

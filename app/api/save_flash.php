@@ -666,6 +666,34 @@ try {
         }
     }
 
+    // =========================================================================
+    // KÄSITTELE KUVAPANKIN KUVAT (library images)
+    // Jos käyttäjä valitsi kuvan kuvapankista (eikä ladannut tiedostoa),
+    // tallennetaan kuvapankki-tiedostonimi suoraan tietokantaan.
+    // =========================================================================
+    $libraryDir = __DIR__ . '/../../uploads/library/';
+    foreach ([1 => 'image_main', 2 => 'image_2', 3 => 'image_3'] as $slot => $dbColumn) {
+        // Ohitetaan jos tähän slottiin tallennettiin jo ladattu (temp) kuva
+        $tempFilename = trim((string)($post["temp_image{$slot}"] ?? ''));
+        if ($tempFilename !== '' && strpos($tempFilename, 'temp_') === 0) {
+            continue;
+        }
+
+        $libraryFilename = basename(trim((string)($post["library_image_{$slot}"] ?? '')));
+        if ($libraryFilename === '' || strpos($libraryFilename, 'lib_') !== 0) {
+            continue;
+        }
+
+        // Tarkista tiedoston olemassaolo kuvapankki-hakemistossa
+        if (!is_file($libraryDir . $libraryFilename)) {
+            continue;
+        }
+
+        // Tallenna kuvapankki-tiedostonimi tietokantaan (tiedosto pysyy library-hakemistossa)
+        $updateStmt = $pdo->prepare("UPDATE sf_flashes SET {$dbColumn} = :filename WHERE id = :id");
+        $updateStmt->execute([':filename' => $libraryFilename, ':id' => $newId]);
+    }
+
     // Tallenna väliaikaiset tiedot (kuvat ja dataURLit) tietokantaan (sf_jobs)
     $tempDataDir = __DIR__ . '/../../uploads/processes/';
     if (!is_dir($tempDataDir)) {
