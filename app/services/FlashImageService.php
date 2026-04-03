@@ -14,6 +14,24 @@ declare(strict_types=1);
 class FlashImageService
 {
     /**
+     * Insert (or replace) a job record in sf_jobs for the given flash.
+     * Deletes any existing pending/in_progress rows first so there is always exactly
+     * one active job per flash.
+     *
+     * @param int   $flashId  Flash ID
+     * @param array $jobData  Associative array to be stored as JSON in job_data
+     * @return void
+     */
+    public static function upsertJob(int $flashId, array $jobData): void
+    {
+        $pdo = Database::getInstance();
+        $pdo->prepare("DELETE FROM sf_jobs WHERE flash_id = ? AND status IN ('pending', 'in_progress')")
+            ->execute([$flashId]);
+        $pdo->prepare("INSERT INTO sf_jobs (flash_id, job_data, status) VALUES (?, ?, 'pending')")
+            ->execute([$flashId, json_encode($jobData, JSON_UNESCAPED_UNICODE)]);
+    }
+
+    /**
      * Generate preview image for a flash
      * 
      * @param int $flashId Flash ID
@@ -59,8 +77,8 @@ class FlashImageService
     }
     
     /**
-     * Create worker job for background image processing
-     * 
+     * Create worker job in sf_jobs table for background image processing
+     *
      * @param int $flashId Flash ID
      * @param array $postData POST data from form
      * @param array $files FILES array from upload
@@ -69,32 +87,31 @@ class FlashImageService
     public function createWorkerJob(int $flashId, array $postData, array $files): void
     {
         $tempDataDir = __DIR__ . '/../../uploads/processes/';
-        
+
         if (!is_dir($tempDataDir)) {
             @mkdir($tempDataDir, 0755, true);
         }
-        
+
         $jobData = ['post' => $postData, 'files' => []];
-        
-        // Handle uploaded files
+
+        // Handle uploaded files – still moved to the filesystem so the worker can read them
         foreach ($files as $key => $file) {
             if (isset($file['tmp_name']) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
                 $safeName = preg_replace('/[^A-Za-z0-9\._-]/', '_', (string)($file['name'] ?? 'file'));
                 $tmpPath = $tempDataDir . $flashId . '_' . $key . '_' . $safeName;
-                
+
                 if (move_uploaded_file($file['tmp_name'], $tmpPath)) {
                     $jobData['files'][$key] = $file;
                     $jobData['files'][$key]['tmp_name'] = $tmpPath;
                 }
             }
         }
-        
-        // Write job data file
-        $jobFilePath = $tempDataDir . $flashId . '.jobdata';
-        $writeSuccess = @file_put_contents($jobFilePath, json_encode($jobData, JSON_UNESCAPED_UNICODE));
-        
-        if ($writeSuccess === false) {
-            error_log("FlashImageService: Failed to write job data file: {$jobFilePath}");
+
+        // Write job data to the database
+        try {
+            self::upsertJob($flashId, $jobData);
+        } catch (Throwable $e) {
+            error_log("FlashImageService: Failed to create job record for flash {$flashId}: " . $e->getMessage());
         }
     }
     

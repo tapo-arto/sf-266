@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/FlashPermissionService.php';
 require_once __DIR__ . '/FlashLogService.php';
+require_once __DIR__ . '/FlashImageService.php';
 require_once __DIR__ . '/../includes/log_app.php';
 require_once __DIR__ . '/../includes/image_helpers.php';
 
@@ -280,31 +281,24 @@ class FlashSaveService
     }
     
     /**
-     * Create job file for worker to process flash image
-     * 
+     * Create job record in sf_jobs table for worker to process flash image
+     *
      * @param int $flashId Flash ID
      * @param array $data Form data (POST data)
      * @return void
      */
     public function createJobFile(int $flashId, array $data): void
     {
-        $tempDataDir = __DIR__ . '/../../uploads/processes/';
-        
-        if (!is_dir($tempDataDir)) {
-            @mkdir($tempDataDir, 0755, true);
-        }
-        
         // Create job data for worker
         $jobData = [
             'post' => $data,
             'files' => [] // Edit mode doesn't upload new files, just updates previews
         ];
-        
-        $jobFilePath = $tempDataDir . $flashId . '.jobdata';
-        $writeSuccess = @file_put_contents($jobFilePath, json_encode($jobData, JSON_UNESCAPED_UNICODE));
-        
-        if ($writeSuccess === false) {
-            error_log("FlashSaveService: Failed to write job data file: {$jobFilePath}");
+
+        try {
+            FlashImageService::upsertJob($flashId, $jobData);
+        } catch (Throwable $e) {
+            error_log("FlashSaveService: Failed to create job record for flash {$flashId}: " . $e->getMessage());
         }
     }
     
