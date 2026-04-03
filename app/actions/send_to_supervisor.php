@@ -35,7 +35,7 @@ $pdo = Database::getInstance();
 // Verify flash exists and user has permission
 $currentUser = sf_current_user();
 $stmt = $pdo->prepare("
-    SELECT id, created_by, state 
+    SELECT id, created_by, state, translation_group_id
     FROM sf_flashes 
     WHERE id = :id
 ");
@@ -99,6 +99,47 @@ $stmt = $pdo->prepare("
 $stmt->execute([':id' => $flashId]);
 
 sf_app_log("[send_to_supervisor] State updated to pending_supervisor for flash {$flashId}");
+
+// Bundle workflow: also update all sibling language versions in the same translation group
+// and copy approver assignments so all versions go to supervisor at once.
+// Only ONE email will be sent (below).
+$bundleGroupId = !empty($flash['translation_group_id']) ? (int)$flash['translation_group_id'] : null;
+if ($bundleGroupId !== null) {
+    try {
+        // Update sibling drafts to pending_supervisor
+        $pdo->prepare("
+            UPDATE sf_flashes
+            SET state = 'pending_supervisor', updated_at = NOW()
+            WHERE (id = :gid OR translation_group_id = :gid2)
+              AND id != :current_id
+              AND state IN ('draft', 'request_info', '')
+        ")->execute([':gid' => $bundleGroupId, ':gid2' => $bundleGroupId, ':current_id' => $flashId]);
+
+        // Fetch sibling IDs
+        $sibStmt = $pdo->prepare("
+            SELECT id FROM sf_flashes
+            WHERE (id = :gid OR translation_group_id = :gid2)
+              AND id != :current_id
+        ");
+        $sibStmt->execute([':gid' => $bundleGroupId, ':gid2' => $bundleGroupId, ':current_id' => $flashId]);
+        $siblingIds = $sibStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($siblingIds)) {
+            $delSib  = $pdo->prepare("DELETE FROM flash_supervisors WHERE flash_id = ?");
+            $insSib  = $pdo->prepare("INSERT INTO flash_supervisors (flash_id, user_id, assigned_at) VALUES (?, ?, NOW())");
+            foreach ($siblingIds as $sibId) {
+                $sibId = (int)$sibId;
+                $delSib->execute([$sibId]);
+                foreach ($approverIds as $approverId) {
+                    $insSib->execute([$sibId, (int)$approverId]);
+                }
+            }
+            sf_app_log("[send_to_supervisor] Bundle: updated " . count($siblingIds) . " sibling(s) in group {$bundleGroupId}");
+        }
+    } catch (Throwable $bundleEx) {
+        sf_app_log("[send_to_supervisor] Bundle group update error: " . $bundleEx->getMessage());
+    }
+}
 
 // Log event
 require_once __DIR__ . '/../includes/log.php';

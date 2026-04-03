@@ -176,10 +176,10 @@ $submissionType = trim((string) ($post['submission_type'] ?? 'review'));
 // Check if this is a translation child
 $isTranslationChild = isset($post['is_translation_child']) && $post['is_translation_child'] === '1';
 
-// For translation children, override submission type to 'translation'
-if ($isTranslationChild || $submissionType === 'translation') {
+// For translation children, override submission type to 'translation' UNLESS the user
+// explicitly chose 'review' (bundle send-to-supervisor flow).
+if ($isTranslationChild && $submissionType !== 'review') {
     $submissionType = 'translation';
-    $isTranslationChild = true;
 }
 
 // Read submission comment (user's message to reviewer)
@@ -195,8 +195,8 @@ $hasSupervisors = is_array($approverIds) && !empty($approverIds);
 // Determine new state based on submission type and whether supervisors are selected
 if ($submissionType === 'draft') {
     $newState = 'draft';
-} elseif ($isTranslationChild) {
-    $newState = 'draft'; // Translation children are saved as drafts (no review workflow)
+} elseif ($submissionType === 'translation') {
+    $newState = 'draft'; // Translation children saved individually are saved as drafts
 } elseif ($hasSupervisors) {
     $newState = 'pending_supervisor'; // Send to supervisor first
 } else {
@@ -726,8 +726,8 @@ try {
     // Uusi SafetyFlash (ei oldState) tai tilamuutos → lähetä sähköposti
     $shouldSendEmail = !isset($oldState) || ($oldState !== $newState);
 
-    // Skip emails for translation children
-    if ($isTranslationChild) {
+    // Skip emails for standalone translation saves (not bundle review submissions)
+    if ($submissionType === 'translation') {
         $shouldSendEmail = false;
     }
 
@@ -743,6 +743,72 @@ try {
             error_log("save_flash: Email sent to supervisors for flash {$newId} (state change: " . ($oldState ?? '(initial)') . " → {$newState})");
         } catch (Throwable $e) {
             error_log('save_flash: Email-lähetys epäonnistui: ' . $e->getMessage());
+        }
+    }
+
+    // =========================================================================
+    // BUNDLE WORKFLOW: Update all sibling language versions in the same
+    // translation group to pending_supervisor when one member is submitted.
+    // Approver assignments are copied to all siblings so the supervisor sees
+    // the full bundle.  Only ONE email is sent (above) for the whole group.
+    // =========================================================================
+    if ($newState === 'pending_supervisor' && $hasSupervisors) {
+        try {
+            // Resolve group ID for this flash
+            $flashGroupRow = $pdo->prepare("SELECT translation_group_id FROM sf_flashes WHERE id = ?");
+            $flashGroupRow->execute([$newId]);
+            $flashGroupData = $flashGroupRow->fetch(PDO::FETCH_ASSOC);
+            $bundleGroupId = !empty($flashGroupData['translation_group_id'])
+                ? (int)$flashGroupData['translation_group_id']
+                : null;
+
+            if ($bundleGroupId !== null) {
+                // Update all other group members that are still in a submittable state
+                $updateSiblingsStmt = $pdo->prepare("
+                    UPDATE sf_flashes
+                    SET state = 'pending_supervisor', updated_at = NOW()
+                    WHERE (id = :gid OR translation_group_id = :gid2)
+                      AND id != :current_id
+                      AND state IN ('draft', 'request_info', '')
+                ");
+                $updateSiblingsStmt->execute([
+                    ':gid'        => $bundleGroupId,
+                    ':gid2'       => $bundleGroupId,
+                    ':current_id' => $newId,
+                ]);
+
+                // Copy approver assignments to sibling flashes
+                $siblingsStmt = $pdo->prepare("
+                    SELECT id FROM sf_flashes
+                    WHERE (id = :gid OR translation_group_id = :gid2)
+                      AND id != :current_id
+                ");
+                $siblingsStmt->execute([
+                    ':gid'        => $bundleGroupId,
+                    ':gid2'       => $bundleGroupId,
+                    ':current_id' => $newId,
+                ]);
+                $siblingIds = $siblingsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                if (!empty($siblingIds)) {
+                    $delSiblingApprovers = $pdo->prepare(
+                        "DELETE FROM flash_supervisors WHERE flash_id = ?"
+                    );
+                    $insSiblingApprovers = $pdo->prepare(
+                        "INSERT INTO flash_supervisors (flash_id, user_id, assigned_at) VALUES (?, ?, NOW())"
+                    );
+                    foreach ($siblingIds as $sibId) {
+                        $sibId = (int)$sibId;
+                        $delSiblingApprovers->execute([$sibId]);
+                        foreach ($approverIds as $approverId) {
+                            $insSiblingApprovers->execute([$sibId, (int)$approverId]);
+                        }
+                    }
+                    error_log("save_flash: Bundle group {$bundleGroupId} - updated " . count($siblingIds) . " sibling(s) to pending_supervisor");
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('save_flash: Bundle group update failed: ' . $e->getMessage());
         }
     }
     // HUOM: Poistettu turha pending_review -sähköpostilogiikka
