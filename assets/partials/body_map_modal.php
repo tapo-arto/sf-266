@@ -43,8 +43,14 @@ function buildBodyPartSvg(string $id, string $svgFile, float $x, float $y, float
         return '';
     }
     $vbParts = preg_split('/[\s,]+/', trim($vm[1]));
-    $vbW = isset($vbParts[2]) ? (float) $vbParts[2] : 0.0;
-    $vbH = isset($vbParts[3]) ? (float) $vbParts[3] : 0.0;
+    if (count($vbParts) !== 4) {
+        return '';
+    }
+    $vbW = (float) $vbParts[2];
+    $vbH = (float) $vbParts[3];
+    if ($vbW <= 0.0 || $vbH <= 0.0 || $w <= 0.0 || $h <= 0.0) {
+        return '';
+    }
 
     // Extract everything between the root <svg> tags
     if (!preg_match('/<svg[^>]*>(.*?)<\/svg>/s', $raw, $cm)) {
@@ -71,12 +77,20 @@ function buildBodyPartSvg(string $id, string $svgFile, float $x, float $y, float
 
     $eId = htmlspecialchars($id, ENT_QUOTES, 'UTF-8');
 
-    // Scale factors: map from the SVG's own viewBox to the desired display size
-    $scaleX = ($vbW > 0.0 && $w > 0.0) ? round($w / $vbW, 6) : 1.0;
-    $scaleY = ($vbH > 0.0 && $h > 0.0) ? round($h / $vbH, 6) : 1.0;
-    $transform = 'translate(' . $x . ',' . $y . ') scale(' . $scaleX . ',' . $scaleY . ')';
+    // Scale factors: map from the SVG's own viewBox to the desired display size.
+    // All divisors are validated non-zero above.
+    $scaleX = round($w / $vbW, 6);
+    $scaleY = round($h / $vbH, 6);
+    // Cast coordinates to float and verify they are finite before embedding
+    $tx = (float) $x;
+    $ty = (float) $y;
+    if (!is_finite($tx) || !is_finite($ty) || !is_finite($scaleX) || !is_finite($scaleY)) {
+        return '';
+    }
+    $transform = 'translate(' . $tx . ',' . $ty . ') scale(' . $scaleX . ',' . $scaleY . ')';
+    $eTransform = htmlspecialchars($transform, ENT_QUOTES, 'UTF-8');
 
-    return '<g id="' . $eId . '" class="sf-bp" transform="' . $transform . '">'
+    return '<g id="' . $eId . '" class="sf-bp" transform="' . $eTransform . '">'
          . $inner . '</g>';
 }
 
