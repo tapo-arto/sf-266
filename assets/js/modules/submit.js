@@ -3,6 +3,16 @@ import { validateStep, showValidationErrors } from './validation.js';
 
 const { getEl } = getters;
 
+/**
+ * Parse approver IDs from a hidden form input. Returns an empty array if
+ * the input is missing or its value is not valid JSON.
+ * @param {HTMLInputElement|null} input
+ * @returns {string[]}
+ */
+function parseApproverIds(input) {
+    try { return JSON.parse(input?.value || '[]'); } catch (_) { return []; }
+}
+
 function createLoadingOverlay() {
     const overlay = document.createElement('div');
     overlay.id = 'sf-loading-overlay';
@@ -200,9 +210,7 @@ async function doSubmit(form, isDraft, isInlineSave = false) {
     }
 
     // Check if this is a bundle review for translation child
-    const approverIdsForMsg = form.querySelector('input[name="approver_ids"]');
-    let hasApprovers = false;
-    try { hasApprovers = JSON.parse(approverIdsForMsg?.value || '[]').length > 0; } catch (_) {}
+    const hasApprovers = parseApproverIds(form.querySelector('input[name="approver_ids"]')).length > 0;
     const isBundleReviewMsg = isTranslationChild && !isDraft && hasApprovers;
 
     showLoading(
@@ -242,9 +250,7 @@ async function doSubmit(form, isDraft, isInlineSave = false) {
         // For translation children, use submission_type = 'translation' UNLESS approver_ids
         // are set (bundle review flow), in which case use 'review' so the supervisor is notified.
         if (isTranslationChild) {
-            const approverIdsInput = form.querySelector('input[name="approver_ids"]');
-            let approverIds = [];
-            try { approverIds = JSON.parse(approverIdsInput?.value || '[]'); } catch (_) {}
+            const approverIds = parseApproverIds(form.querySelector('input[name="approver_ids"]'));
             const isBundleReview = !isDraft && approverIds.length > 0;
             formData.append('submission_type', isBundleReview ? 'review' : (isDraft ? 'draft' : 'translation'));
         } else {
@@ -354,9 +360,7 @@ async function doSubmit(form, isDraft, isInlineSave = false) {
                     window.location.href = `${baseUrl}/index.php?page=form&id=${encodeURIComponent(result.flash_id)}&step=6&saved=1`;
                 } else {
                     // Check if approvers were submitted (bundle review) for appropriate notice
-                    const approverIdsInput = form.querySelector('input[name="approver_ids"]');
-                    let approverIds = [];
-                    try { approverIds = JSON.parse(approverIdsInput?.value || '[]'); } catch (_) {}
+                    const approverIds = parseApproverIds(form.querySelector('input[name="approver_ids"]'));
                     const notice = approverIds.length > 0 ? 'sent_to_review' : 'translation_saved';
                     window.location.href = `${baseUrl}/index.php?page=view&id=${encodeURIComponent(result.flash_id)}&notice=${notice}`;
                 }
