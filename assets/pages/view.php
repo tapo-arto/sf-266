@@ -1408,25 +1408,26 @@ $iconBase = $base .'/assets/img/icons/';
                                 $aiName    = trim($aiFirst . ' ' . $aiLast) ?: sf_term('additional_info_unknown_author', $currentUiLang);
                                 $aiIsOwn   = $canAccessSettings && ((int)($aiEntry['user_id'] ?? 0) === $currentUserId || $isAdmin);
                                 ?>
-                                <div class="sf-additional-info-item" data-ai-id="<?= (int)$aiEntry['id'] ?>">
-                                    <div class="sf-ai-meta">
-                                        <span class="sf-ai-author-date">
-                                            <?= htmlspecialchars($aiName, ENT_QUOTES, 'UTF-8') ?>
-                                            &middot;
-                                            <?= htmlspecialchars($aiEntry['created_at'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                                        </span>
-                                        <?php if ($aiIsOwn): ?>
-                                        <button type="button"
-                                                class="sf-comment-action-btn btn-edit-additional-info"
-                                                data-ai-id="<?= (int)$aiEntry['id'] ?>"
-                                                data-content="<?= htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8') ?>">
-                                            <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">
-                                            <?= htmlspecialchars(sf_term('comment_edit', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-                                        </button>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="sf-ai-content">
-                                        <?= nl2br(htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8')) ?>
+                                <div class="sf-comment-item" data-ai-id="<?= (int)$aiEntry['id'] ?>">
+                                    <div class="sf-comment-content">
+                                        <div class="sf-comment-header">
+                                            <div>
+                                                <span class="sf-comment-author"><?= htmlspecialchars($aiName, ENT_QUOTES, 'UTF-8') ?></span>
+                                                <span class="sf-comment-time">&middot; <?= htmlspecialchars($aiEntry['created_at'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+                                            </div>
+                                            <?php if ($aiIsOwn): ?>
+                                            <button type="button"
+                                                    class="sf-comment-action-btn btn-edit-additional-info"
+                                                    data-ai-id="<?= (int)$aiEntry['id'] ?>"
+                                                    data-content="<?= htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8') ?>">
+                                                <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">
+                                                <?= htmlspecialchars(sf_term('comment_edit', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                                            </button>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="sf-comment-body">
+                                            <?= nl2br(htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8')) ?>
+                                        </div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -4181,26 +4182,31 @@ function closePublishSingleModal() {
     function renderNewEntry(entry) {
         var name  = ((entry.first_name || '') + ' ' + (entry.last_name || '')).trim() || aiMsgs.unknownAuthor;
         var div   = document.createElement('div');
-        div.className    = 'sf-additional-info-item';
+        div.className    = 'sf-comment-item';
         div.dataset.aiId = entry.id;
         div.innerHTML =
-            '<div class="sf-ai-meta">' +
-                '<span class="sf-ai-author-date">' + escapeHtml(name) + ' &middot; ' + escapeHtml(entry.created_at || '') + '</span>' +
-                '<button type="button" class="sf-comment-action-btn btn-edit-additional-info"' +
-                    ' data-ai-id="' + escapeHtml(String(entry.id)) + '"' +
-                    ' data-content="' + escapeHtml(entry.content || '') + '">' +
-                    '<img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">' +
-                    ' ' + escapeHtml(aiMsgs.editBtnLabel) +
-                '</button>' +
-            '</div>' +
-            '<div class="sf-ai-content">' + escapeHtml(entry.content || '').replace(/\n/g, '<br>') + '</div>';
+            '<div class="sf-comment-content">' +
+                '<div class="sf-comment-header">' +
+                    '<div>' +
+                        '<span class="sf-comment-author">' + escapeHtml(name) + '</span>' +
+                        ' <span class="sf-comment-time">&middot; ' + escapeHtml(entry.created_at || '') + '</span>' +
+                    '</div>' +
+                    '<button type="button" class="sf-comment-action-btn btn-edit-additional-info"' +
+                        ' data-ai-id="' + escapeHtml(String(entry.id)) + '"' +
+                        ' data-content="' + escapeHtml(entry.content || '') + '">' +
+                        '<img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">' +
+                        ' ' + escapeHtml(aiMsgs.editBtnLabel) +
+                    '</button>' +
+                '</div>' +
+                '<div class="sf-comment-body">' + escapeHtml(entry.content || '').replace(/\n/g, '<br>') + '</div>' +
+            '</div>';
         return div;
     }
 
     function updateEntryInList(id, content) {
-        var item = document.querySelector('.sf-additional-info-item[data-ai-id="' + id + '"]');
+        var item = document.querySelector('.sf-comment-item[data-ai-id="' + id + '"]');
         if (!item) { return; }
-        var contentEl  = item.querySelector('.sf-ai-content');
+        var contentEl  = item.querySelector('.sf-comment-body');
         var editBtn    = item.querySelector('.btn-edit-additional-info');
         if (contentEl) { contentEl.innerHTML = escapeHtml(content).replace(/\n/g, '<br>'); }
         if (editBtn)   { editBtn.dataset.content = content; }
@@ -4239,6 +4245,9 @@ function closePublishSingleModal() {
                         list.appendChild(renderNewEntry(data.entry));
                     }
                     closeModal();
+                    if (typeof showNotification === 'function') {
+                        showNotification(aiMsgs.saved, 'success');
+                    }
                 } else {
                     if (status) {
                         status.textContent = aiMsgs.error;

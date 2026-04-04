@@ -672,14 +672,14 @@ if (!empty($gridBitmap)):
         $aiDate  = $aiEntry['created_at'] ?? '';
         $aiContent = trim((string)($aiEntry['content'] ?? ''));
         ?>
-        <div class="content-box" style="margin-bottom: 12px;">
+        <div style="margin-bottom: 14px;">
             <?php if ($aiName !== '' || $aiDate !== ''): ?>
-            <div style="font-size: 9pt; color: #6b7280; margin-bottom: 4px;">
+            <div style="font-size: 9pt; color: #6b7280; margin-bottom: 3px;">
                 <?php if ($aiName !== ''): ?><?= htmlspecialchars($aiName) ?><?php endif; ?>
                 <?php if ($aiDate !== ''): ?>&nbsp;&middot;&nbsp;<?= htmlspecialchars($aiDate) ?><?php endif; ?>
             </div>
             <?php endif; ?>
-            <div><?= nl2br(htmlspecialchars($aiContent)) ?></div>
+            <p style="margin: 0; line-height: 1.5; color: #333;"><?= nl2br(htmlspecialchars($aiContent)) ?></p>
         </div>
     <?php endforeach; ?>
 </div>
