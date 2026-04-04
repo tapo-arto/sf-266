@@ -1736,16 +1736,21 @@ input[type="time"]:hover {
     }
 
     .sf-step6-footer {
-        flex-direction: column;
-        align-items: stretch;
         gap: 10px;
         margin: 16px auto 100px;
     }
 
+    .sf-step6-footer-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
     .sf-step6-footer-right {
+        order: 1;
         flex: 1;
         display: flex;
-        flex-direction: column;
+        flex-direction: column-reverse;
         gap: 10px;
         width: 100%;
     }
@@ -1756,13 +1761,13 @@ input[type="time"]:hover {
     }
 
     .sf-step6-footer .sf-prev-btn {
-        order: 10;
+        order: 2;
         width: 100%;
     }
 
     .sf-bundle-info-bar {
         width: 100%;
-        justify-content: center;
+        justify-content: flex-start;
         white-space: normal;
     }
 
@@ -7271,12 +7276,10 @@ body.form-page .sf-form-progress__steps::before {
     }
 }
 
-/* ── Step 6 footer: compact, centred row with Prev left and action buttons right ── */
+/* ── Step 6 footer: info bar above, then prev-btn left / action buttons right ── */
 .sf-step6-footer {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 12px;
     margin: 32px auto;
     max-width: none;
@@ -7291,6 +7294,16 @@ body.form-page .sf-form-progress__steps::before {
     }
 }
 
+/* Row containing Prev (left) and action buttons (right) */
+.sf-step6-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+}
+
 .sf-step6-footer-right {
     display: flex;
     align-items: stretch;
@@ -7298,19 +7311,20 @@ body.form-page .sf-form-progress__steps::before {
     flex-wrap: wrap;
 }
 
-/* Bundle info bar shown in the footer when multiple language versions exist */
+/* Bundle info bar: informational banner above the buttons, not button-like */
 .sf-bundle-info-bar {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
-    min-height: 48px;
+    padding: 10px 16px;
     background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 6px;
+    border: none;
+    border-left: 4px solid #93c5fd;
+    border-radius: 8px;
     font-size: 0.875rem;
     color: #1e40af;
     white-space: normal;
+    width: 100%;
     box-sizing: border-box;
 }
 
@@ -7320,12 +7334,16 @@ body.form-page .sf-form-progress__steps::before {
     gap: 4px;
 }
 
+/* Buttons in the footer: allow text wrapping for long labels */
 .sf-step6-footer .sf-btn {
-    width: auto;
-    padding: 12px 24px;
-    min-width: 120px;
+    white-space: normal;
+    line-height: 1.4;
+    text-align: center;
+    height: auto;
     min-height: 48px;
-    white-space: nowrap;
+    min-width: 120px;
+    padding: 10px 20px;
+    width: auto;
     box-sizing: border-box;
 }
 
