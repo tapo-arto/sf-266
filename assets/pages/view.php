@@ -1986,6 +1986,18 @@ $descAllowed = strip_tags($descProcessed, '<strong><span>');
                         $flash = $commsVer;
                         $context = 'safety_team';
                         unset($preselectedIds);
+                        ?>
+                        <div style="margin-top: 24px; margin-bottom: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+                            <?php
+                            $langData = $supportedLangs[$commsVer['lang']] ?? null;
+                            if ($langData): ?>
+                                <img src="<?= htmlspecialchars($base) ?>/assets/img/<?= htmlspecialchars($langData['icon']) ?>" alt="<?= htmlspecialchars($langData['label']) ?>" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                                <span><?= htmlspecialchars($langData['label']) ?> (<?= htmlspecialchars($commsVer['title']) ?>)</span>
+                            <?php else: ?>
+                                <span><?= htmlspecialchars(strtoupper($commsVer['lang'])) ?> (<?= htmlspecialchars($commsVer['title']) ?>)</span>
+                            <?php endif; ?>
+                        </div>
+                        <?php
                         require __DIR__ . '/../partials/display_target_selector.php';
                     endforeach;
                     $flash = $commsOriginalFlash;
