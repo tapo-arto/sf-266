@@ -992,11 +992,13 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
       <!-- Valitut ruumiinosat näytetään tageina -->
       <div id="sfInjuryTags" class="sf-injury-tags"></div>
       <!-- Piilotettu select — lähetetään lomakkeen mukana -->
-      <select id="sfInjuredPartsHidden" name="injured_parts[]" multiple style="display:none"><?php
+      <select id="sfInjuredPartsHidden" name="injured_parts[]" multiple class="sf-form-hidden"><?php
         foreach ($existing_body_parts as $svgId): ?><option value="<?= htmlspecialchars($svgId, ENT_QUOTES, 'UTF-8') ?>" selected><?= htmlspecialchars($svgId, ENT_QUOTES, 'UTF-8') ?></option><?php
         endforeach;
       ?></select>
     </div>
+
+    <div id="sf-investigation-extra" class="sf-step3-investigation hidden">
       <div class="sf-field">
         <label for="sf-root-causes" class="sf-label">
           <?= htmlspecialchars(sf_term('root_cause_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>

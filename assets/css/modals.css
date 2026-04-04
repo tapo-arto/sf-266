@@ -2762,3 +2762,8 @@ body.sf-modal-open {
         width: 90px;
     }
 }
+
+/* Utility: piilotettu lomakekenttä (lähetetään lomakkeen mukana mutta ei näy käyttäjälle) */
+.sf-form-hidden {
+    display: none;
+}

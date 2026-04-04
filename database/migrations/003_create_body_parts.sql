@@ -49,5 +49,6 @@ CREATE TABLE IF NOT EXISTS `incident_body_part` (
   `body_part_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`incident_id`, `body_part_id`),
   KEY `idx_body_part_id` (`body_part_id`),
+  CONSTRAINT `fk_ibp_incident` FOREIGN KEY (`incident_id`) REFERENCES `sf_flashes` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_ibp_body_part` FOREIGN KEY (`body_part_id`) REFERENCES `body_parts` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
