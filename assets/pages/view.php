@@ -1434,7 +1434,7 @@ $iconBase = $base .'/assets/img/icons/';
                                             <?php endif; ?>
                                         </div>
                                         <div class="sf-comment-body">
-                                            <?= $aiEntry['content'] ?>
+                                            <?= strip_tags($aiEntry['content'], '<p><br><strong><em><u><ol><ul><li><span>') ?>
                                         </div>
                                     </div>
                                 </div>
@@ -1754,7 +1754,7 @@ include __DIR__ . '/../partials/body_map_modal.php';
             <label for="sfAdditionalInfoEditor">
                 <?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
             </label>
-            <div id="sfAdditionalInfoEditor" style="min-height: 140px; background: #fff;"></div>
+            <div id="sfAdditionalInfoEditor" style="min-height: 140px; background: #fff;" role="textbox" aria-multiline="true" aria-label="<?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>"></div>
             <span id="sfAdditionalInfoStatus" style="display:block; font-size: 0.875rem; min-height: 1.2em;" aria-live="polite"></span>
             <div class="sf-modal-actions">
                 <button type="button" class="sf-btn sf-btn-secondary" data-modal-close="sfAdditionalInfoModal">
@@ -3097,6 +3097,7 @@ function updateDeleteModalContent() {
 <!-- Quill WYSIWYG editor -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 
 <!-- Safetyflash CSS & JS -->
 <link rel="stylesheet" href="<?= sf_asset_url('assets/css/display-ttl.css', $base) ?>">
@@ -4193,6 +4194,15 @@ function closePublishSingleModal() {
 
     var quillEditor = null;
 
+    var SAFE_TAGS = ['P', 'BR', 'STRONG', 'EM', 'U', 'OL', 'UL', 'LI', 'SPAN'];
+    function sanitizeHtml(html) {
+        if (typeof DOMPurify !== 'undefined') {
+            return DOMPurify.sanitize(html, { ALLOWED_TAGS: SAFE_TAGS, ALLOWED_ATTR: [] });
+        }
+        // Fallback: return empty string if DOMPurify is unavailable
+        return '';
+    }
+
     function escapeHtml(str) {
         return String(str)
             .replace(/&/g, '&amp;')
@@ -4257,7 +4267,7 @@ function closePublishSingleModal() {
         var div   = document.createElement('div');
         div.className    = 'sf-comment-item';
         div.dataset.aiId = entry.id;
-        var contentHtml  = entry.content || '';
+        var contentHtml  = sanitizeHtml(entry.content || '');
         div.innerHTML =
             '<div class="sf-comment-content">' +
                 '<div class="sf-comment-header">' +
@@ -4268,7 +4278,7 @@ function closePublishSingleModal() {
                     '<div class="sf-comment-actions">' +
                         '<button type="button" class="sf-comment-action-btn btn-edit-additional-info"' +
                             ' data-ai-id="' + escapeHtml(String(entry.id)) + '"' +
-                            ' data-content="' + escapeHtml(contentHtml) + '">' +
+                            ' data-content="' + escapeHtml(entry.content || '') + '">' +
                             '<img src="' + escapeHtml(aiMsgs.baseUrl) + '/assets/img/icons/edit.svg" alt="" class="sf-action-icon">' +
                             ' ' + escapeHtml(aiMsgs.editBtnLabel) +
                         '</button>' +
@@ -4289,7 +4299,7 @@ function closePublishSingleModal() {
         if (!item) { return; }
         var contentEl  = item.querySelector('.sf-comment-body');
         var editBtn    = item.querySelector('.btn-edit-additional-info');
-        if (contentEl) { contentEl.innerHTML = content; }
+        if (contentEl) { contentEl.innerHTML = sanitizeHtml(content); }
         if (editBtn)   { editBtn.dataset.content = content; }
     }
 

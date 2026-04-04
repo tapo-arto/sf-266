@@ -666,7 +666,7 @@ if (!empty($gridBitmap)):
     <div class="section-header"><?= htmlspecialchars($l['additional_info_pdf_section'] ?? 'Lisätiedot tapahtumasta') ?></div>
     <?php foreach ($additionalInfoEntries as $aiEntry): ?>
         <?php
-        $aiContent = trim((string)($aiEntry['content'] ?? ''));
+        $aiContent = strip_tags(trim((string)($aiEntry['content'] ?? '')), '<p><br><strong><em><u><ol><ul><li><span>');
         ?>
         <div style="margin-bottom: 14px;">
             <div style="margin: 0; line-height: 1.5; color: #333;"><?= $aiContent ?></div>
