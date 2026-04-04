@@ -66,7 +66,7 @@ if (!$isAdmin && (!$isSupervisor || !$isSelectedApprover)) {
 }
 
 // Update state to pending_review for all language versions in the bundle
-$updatedCount = sf_update_state_all_languages($pdo, $flashId, 'pending_review');
+sf_update_state_all_languages($pdo, $flashId, 'pending_review');
 
 // Log event
 require_once __DIR__ . '/../includes/log.php';
