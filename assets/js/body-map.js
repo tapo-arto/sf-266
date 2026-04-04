@@ -1,14 +1,14 @@
 /**
  * assets/js/body-map.js
- * Loukkaantuneiden ruumiinosien valinta — SVG ↔ dropdown-synkronointi
+ * Loukkaantuneiden kehonosien valinta — SVG ↔ dropdown-synkronointi
  */
 (function () {
     'use strict';
 
     // i18n-merkkijonot laskurille ja poistonapille (PHP kirjoittaa window.BODY_MAP_I18N)
     var I18N = {
-        countSingle: '1 ruumiinosa valittu',
-        countPlural:  '{n} ruumiinosaa valittu',
+        countSingle: '1 kehonosa valittu',
+        countPlural:  '{n} kehonosaa valittu',
         removeLabel:  'Poista',
     };
     if (typeof window.BODY_MAP_I18N === 'object' && window.BODY_MAP_I18N) {
@@ -102,7 +102,7 @@
         updateCount();
     }
 
-    /** Toggle yksittäinen ruumiinosa kanonisella tunnuksella */
+    /** Toggle yksittäinen kehonosa kanonisella tunnuksella */
     function togglePart(canonicalId) {
         if (selected.has(canonicalId)) {
             selected.delete(canonicalId);

@@ -143,7 +143,7 @@ export function handleConditionalFields() {
 
     toggle('sf-investigation-extra', isInvestigation);
 
-    // Loukkaantuneet ruumiinosat — vain Ensitiedotteessa (type=red)
+    // Loukkaantuneet kehonosat — vain Ensitiedotteessa (type=red)
     toggle('sf-injury-section', isEnsitiedote);
 
     const standaloneChecked = standaloneCheckbox?.checked || false;
