@@ -4119,9 +4119,16 @@ function closePublishSingleModal() {
             parts.forEach(function (p) { formData.append('injured_parts[]', p); });
 
             fetch(apiUrl, { method: 'POST', body: formData })
-                .then(function (r) { return r.json(); })
+                .then(function (r) {
+                    if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                    return r.json();
+                })
                 .then(function (data) {
                     if (data.ok) {
+                        // Sync hidden select and tags with the server-confirmed saved parts
+                        if (Array.isArray(data.saved_parts) && window.BodyMap) {
+                            window.BodyMap.init();
+                        }
                         if (typeof showNotification === 'function') {
                             showNotification(saveMsgs.success, 'success');
                         }

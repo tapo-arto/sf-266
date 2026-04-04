@@ -97,7 +97,7 @@ try {
                 continue;
             }
             // Allow only safe svg_id characters: lowercase letters, digits, hyphens
-            if (!preg_match('/^[a-z0-9\-]+$/', $part) || strlen($part) > 50) {
+            if (!preg_match('/^[a-z0-9-]+$/', $part) || strlen($part) > 50) {
                 http_response_code(400);
                 echo json_encode(['ok' => false, 'error' => 'Invalid body part value'], JSON_UNESCAPED_UNICODE);
                 exit;
