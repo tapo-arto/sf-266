@@ -36,7 +36,7 @@ try {
         exit;
     }
 
-    $searchPattern = '%' . $query . '%';
+    $searchPattern = '%' . addcslashes($query, '%_\\') . '%';
 
     $stmt = $pdo->prepare("
         SELECT

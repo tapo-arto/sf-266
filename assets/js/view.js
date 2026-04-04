@@ -1796,7 +1796,7 @@
                 setActiveItem(Math.min(activeIndex + 1, items.length - 1));
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                setActiveItem(Math.max(activeIndex - 1, 0));
+                setActiveItem(activeIndex > 0 ? activeIndex - 1 : -1);
             } else if (e.key === 'Enter' || e.key === 'Tab') {
                 if (activeIndex >= 0 && items[activeIndex]) {
                     e.preventDefault();
