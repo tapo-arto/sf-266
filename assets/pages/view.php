@@ -78,6 +78,24 @@ if ($currentUser && $flash) {
 $uiLang          = $_SESSION['ui_lang'] ?? 'fi';
 $currentUiLang   = $uiLang ?? 'fi';
 
+// Load existing body parts for Ensitiedote (type='red') quick-edit
+$existing_body_parts = [];
+if (($flash['type'] ?? '') === 'red') {
+    try {
+        $bpStmt = $pdo->prepare("
+            SELECT bp.svg_id
+            FROM incident_body_part ibp
+            JOIN body_parts bp ON bp.id = ibp.body_part_id
+            WHERE ibp.incident_id = :id
+            ORDER BY bp.sort_order
+        ");
+        $bpStmt->execute([':id' => $id]);
+        $existing_body_parts = array_column($bpStmt->fetchAll(PDO::FETCH_ASSOC), 'svg_id');
+    } catch (Throwable $e) {
+        error_log('view.php: Failed to load body parts: ' . $e->getMessage());
+    }
+}
+
 // Check if user can manage reviewers (admin, safety team, or original creator)
 $canManageReviewers = false;
 if ($currentUser) {
@@ -1781,6 +1799,21 @@ $descAllowed = strip_tags($descProcessed, '<strong><span>');
 
 </div> <!-- .view-container -->
 </div> <!-- .sf-page-container -->
+
+<?php if (($flash['type'] ?? '') === 'red'): ?>
+<!-- Hidden select for body map quick-edit (pre-populated with current body parts) -->
+<select id="sfInjuredPartsHidden" multiple class="sf-form-hidden" style="display:none;" aria-hidden="true">
+    <?php foreach ($existing_body_parts as $svgId): ?>
+        <option value="<?= htmlspecialchars($svgId, ENT_QUOTES, 'UTF-8') ?>" selected><?= htmlspecialchars($svgId, ENT_QUOTES, 'UTF-8') ?></option>
+    <?php endforeach; ?>
+</select>
+
+<?php
+// Body map modal — Ensitiedote quick-edit
+$uiLang = $currentUiLang;
+include __DIR__ . '/../partials/body_map_modal.php';
+?>
+<?php endif; ?>
 
 <!-- ===== MODALIT ===== -->
 <div class="sf-modal hidden" id="modalEdit" role="dialog" aria-modal="true" aria-labelledby="modalEditTitle">
@@ -4052,3 +4085,72 @@ function closePublishSingleModal() {
 
 <!-- Image Captions Module -->
 <script src="<?= sf_asset_url('assets/js/modules/image_captions.js', $base) ?>"></script>
+
+<?php if (($flash['type'] ?? '') === 'red'): ?>
+<script src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/js/body-map.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var flashId   = <?= (int)$flash['id'] ?>;
+    var csrfToken = window.SF_CSRF_TOKEN || '';
+    var apiUrl    = '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/app/api/update_body_parts.php';
+
+    var saveMsgs = {
+        success: <?= json_encode(sf_term('body_map_save_success', $currentUiLang) ?: 'Loukkaantumiset tallennettu', JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        error:   <?= json_encode(sf_term('body_map_save_error', $currentUiLang)   ?: 'Tallennus epäonnistui', JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    };
+
+    function init() {
+        var saveBtn = document.getElementById('sfBodyMapSaveBtn');
+        if (!saveBtn) { return; }
+
+        saveBtn.addEventListener('click', function () {
+            var hiddenSelect = document.getElementById('sfInjuredPartsHidden');
+            if (!hiddenSelect) { return; }
+
+            var parts = Array.from(hiddenSelect.options)
+                .filter(function (o) { return o.selected; })
+                .map(function (o) { return o.value; });
+
+            var formData = new FormData();
+            formData.append('flash_id', flashId);
+            formData.append('csrf_token', csrfToken);
+            parts.forEach(function (p) { formData.append('injured_parts[]', p); });
+
+            fetch(apiUrl, { method: 'POST', body: formData })
+                .then(function (r) {
+                    if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                    return r.json();
+                })
+                .then(function (data) {
+                    if (data.ok) {
+                        // Sync hidden select and tags with the server-confirmed saved parts
+                        if (Array.isArray(data.saved_parts) && window.BodyMap) {
+                            window.BodyMap.init();
+                        }
+                        if (typeof showNotification === 'function') {
+                            showNotification(saveMsgs.success, 'success');
+                        }
+                    } else {
+                        if (typeof showNotification === 'function') {
+                            showNotification(saveMsgs.error + (data.error ? ': ' + data.error : ''), 'error');
+                        }
+                    }
+                })
+                .catch(function () {
+                    if (typeof showNotification === 'function') {
+                        showNotification(saveMsgs.error, 'error');
+                    }
+                });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+<?php endif; ?>

@@ -75,6 +75,20 @@ return [
     'it' => 'Salva selezioni',
     'el' => 'Αποθήκευση επιλογών',
 ],
+'body_map_save_success' => [
+    'fi' => 'Loukkaantumiset tallennettu',
+    'sv' => 'Skador sparade',
+    'en' => 'Injuries saved',
+    'it' => 'Lesioni salvate',
+    'el' => 'Τραυματισμοί αποθηκεύτηκαν',
+],
+'body_map_save_error' => [
+    'fi' => 'Tallennus epäonnistui',
+    'sv' => 'Det gick inte att spara',
+    'en' => 'Failed to save',
+    'it' => 'Salvataggio non riuscito',
+    'el' => 'Αποτυχία αποθήκευσης',
+],
 'body_map_count_single' => [
     'fi' => '1 ruumiinosa valittu',
     'sv' => '1 kroppsdel vald',

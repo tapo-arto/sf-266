@@ -222,6 +222,22 @@ $statusLabel     = function_exists('sf_status_label') ? (sf_status_label($flash[
         <div><?= htmlspecialchars($flash['occurredFmt'] ?? '') ?></div>
     </div>
 
+    <?php if (($flash['type'] ?? '') === 'red'): ?>
+    <div class="meta-item" id="sfViewBodyPartsSection">
+        <strong><?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>:</strong>
+        <div id="sfInjuryTags" class="sf-injury-tags"></div>
+        <?php if ($isAdmin || $isSafety || $isOwner): ?>
+        <div class="sf-injury-btn-row" style="margin-top:0.5rem;">
+            <button type="button" id="sfBodyMapOpenBtn" class="sf-btn-body-map" data-modal-open="#sfBodyMapModal">
+                <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/injury_icon.svg"
+                     width="18" height="18" alt="" aria-hidden="true" class="sf-btn-icon">
+                <?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <!-- JÄRJESTELMÄTIEDOT: kieli, luotu, muokattu -->
     <hr class="meta-separator">
 
