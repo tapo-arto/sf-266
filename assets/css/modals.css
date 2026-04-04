@@ -2628,28 +2628,42 @@ body.sf-modal-open {
     overflow: visible;
 }
 
+/* Decorative body silhouette background (non-interactive) */
+.sf-body-bg > * {
+    fill: #dde3eb;
+    stroke: #b0bcc8;
+    stroke-width: 0.8;
+    pointer-events: none;
+}
+
 /* Ruumiinosien perustyyli */
 .sf-bp {
-    fill: #cbd5e1;
+    fill: rgba(203, 213, 225, 0.72);
     stroke: #94a3b8;
-    stroke-width: 1.5;
+    stroke-width: 1.2;
     cursor: pointer;
     transition: fill 0.15s, stroke 0.15s;
     outline: none;
 }
 
 .sf-bp:hover {
-    fill: #bfdbfe;
+    fill: rgba(191, 219, 254, 0.88);
     stroke: #3b82f6;
 }
 
 .sf-bp.selected {
-    fill: #3b82f6;
+    fill: rgba(59, 130, 246, 0.82);
     stroke: #1d4ed8;
 }
 
 .sf-bp-back-ref {
     cursor: pointer;
+}
+
+/* Injury icon used as img inside headers/buttons */
+.sf-modal-icon-img {
+    vertical-align: middle;
+    flex-shrink: 0;
 }
 
 /* Footer: valintamäärä */

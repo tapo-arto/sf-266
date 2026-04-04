@@ -27,6 +27,7 @@ $modules = [
     'messages'   => require $termsDir . '/messages.php',
     'images'     => require $termsDir . '/images.php',
     'display'    => require $termsDir . '/display.php',
+    'body_map'   => require $termsDir . '/body_map.php',
 ];
 
 // Merge all terms into one array
