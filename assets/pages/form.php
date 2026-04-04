@@ -1533,14 +1533,16 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
     <!-- Translation child mode footer -->
     <div class="sf-step6-footer">
       <?php
-      // Add "Tallenna" (sfSaveInline) as an extra button when editing past draft/request_info state
+      // Määritä näytettävä painike tilan mukaan (sama logiikka kuin pääkieliversion footer)
+      // - draft ja request_info: näytä "Tallenna luonnos" + "Lisää kieliversio" + "Lähetä tarkistettavaksi"
+      // - muut tilat (pending_supervisor, pending_review, reviewed, to_comms, published): näytä vain "Tallenna"
       $showSendToReview = ! $editing
           || $state_val === 'draft'
           || $state_val === 'request_info'
           || $state_val === '';
       $actionUrl = $base . '/app/api/save_flash.php';
       ?>
-      <?php if ($isInBundle): ?>
+      <?php if (! ($editing && ! $showSendToReview) && $isInBundle): ?>
         <!-- Bundle info bar above the button row -->
         <div class="sf-bundle-info-bar">
           <span class="sf-bundle-info-label">
@@ -1555,7 +1557,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
         </button>
         <div class="sf-step6-footer-right">
           <?php if ($editing && ! $showSendToReview): ?>
-            <!-- Extra inline-save button when past draft/request_info state -->
+            <!-- Muokkaus tilassa joka EI ole draft/request_info - vain tallenna -->
             <button
               type="button"
               id="sfSaveInline"
@@ -1563,71 +1565,73 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
               data-action-url="<?= htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') ?>"
               data-flash-id="<?= (int)$editId ?>"
             >
-              <?= htmlspecialchars(sf_term('btn_save', $uiLang), ENT_QUOTES, 'UTF-8') ?>
-            </button>
-          <?php endif; ?>
-          <?php if ($isInBundle): ?>
-            <!-- Bundle mode: save draft + add language + send-all -->
-            <button
-              type="submit"
-              name="submission_type"
-              value="draft"
-              id="sfSaveDraft"
-              class="sf-btn sf-btn-secondary"
-            >
-              <?= htmlspecialchars(sf_term('btn_save_draft', $uiLang), ENT_QUOTES, 'UTF-8') ?>
-            </button>
-            <button
-              type="button"
-              id="sfAddLanguageVersion"
-              class="sf-btn sf-btn-outline"
-              title="<?= htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?? 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8') ?>"
-            >
-              ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
-            </button>
-            <button
-              type="submit"
-              name="submission_type"
-              value="review"
-              id="sfSubmitReview"
-              class="sf-btn sf-btn-primary"
-            >
-              <?php
-              $sendAllLabel = sprintf(
-                  sf_term('btn_send_bundle_review', $uiLang) ?? 'Lähetä kaikki (%d) tarkistettavaksi',
-                  $bundleCount
-              );
-              echo htmlspecialchars($sendAllLabel, ENT_QUOTES, 'UTF-8');
-              ?>
+              <?= htmlspecialchars(sf_term('btn_save', $uiLang) ?? 'Tallenna', ENT_QUOTES, 'UTF-8') ?>
             </button>
           <?php else: ?>
-            <!-- Single translation child (not in bundle): save as draft + add language + send for review -->
-            <button
-              type="submit"
-              name="submission_type"
-              value="draft"
-              id="sfSaveDraft"
-              class="sf-btn sf-btn-secondary"
-            >
-              <?= htmlspecialchars(sf_term('btn_save_draft', $uiLang), ENT_QUOTES, 'UTF-8') ?>
-            </button>
-            <button
-              type="button"
-              id="sfAddLanguageVersion"
-              class="sf-btn sf-btn-outline"
-              title="<?= htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?? 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8') ?>"
-            >
-              ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
-            </button>
-            <button
-              type="submit"
-              name="submission_type"
-              value="review"
-              id="sfSubmitReview"
-              class="sf-btn sf-btn-primary"
-            >
-              <?= htmlspecialchars(sf_term('btn_send_review', $uiLang) ?? 'Lähetä tarkistettavaksi', ENT_QUOTES, 'UTF-8') ?>
-            </button>
+            <!-- Uusi tai draft/request_info - näytä kaikki painikkeet -->
+            <?php if ($isInBundle): ?>
+              <!-- Bundle mode: save draft + add language + send-all -->
+              <button
+                type="submit"
+                name="submission_type"
+                value="draft"
+                id="sfSaveDraft"
+                class="sf-btn sf-btn-secondary"
+              >
+                <?= htmlspecialchars(sf_term('btn_save_draft', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+              </button>
+              <button
+                type="button"
+                id="sfAddLanguageVersion"
+                class="sf-btn sf-btn-outline"
+                title="<?= htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?? 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8') ?>"
+              >
+                ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
+              </button>
+              <button
+                type="submit"
+                name="submission_type"
+                value="review"
+                id="sfSubmitReview"
+                class="sf-btn sf-btn-primary"
+              >
+                <?php
+                $sendAllLabel = sprintf(
+                    sf_term('btn_send_bundle_review', $uiLang) ?? 'Lähetä kaikki (%d) tarkistettavaksi',
+                    $bundleCount
+                );
+                echo htmlspecialchars($sendAllLabel, ENT_QUOTES, 'UTF-8');
+                ?>
+              </button>
+            <?php else: ?>
+              <!-- Single translation child (not in bundle): save as draft + add language + send for review -->
+              <button
+                type="submit"
+                name="submission_type"
+                value="draft"
+                id="sfSaveDraft"
+                class="sf-btn sf-btn-secondary"
+              >
+                <?= htmlspecialchars(sf_term('btn_save_draft', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+              </button>
+              <button
+                type="button"
+                id="sfAddLanguageVersion"
+                class="sf-btn sf-btn-outline"
+                title="<?= htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?? 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8') ?>"
+              >
+                ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
+              </button>
+              <button
+                type="submit"
+                name="submission_type"
+                value="review"
+                id="sfSubmitReview"
+                class="sf-btn sf-btn-primary"
+              >
+                <?= htmlspecialchars(sf_term('btn_send_review', $uiLang) ?? 'Lähetä tarkistettavaksi', ENT_QUOTES, 'UTF-8') ?>
+              </button>
+            <?php endif; // $isInBundle ?>
           <?php endif; ?>
         </div>
       </div>
