@@ -5,41 +5,7 @@
 (function () {
     'use strict';
 
-    // Nimikartta: svg_id -> näytettävä nimi (fallback, jos käännetty versio puuttuu)
-    var PART_LABELS_FALLBACK = {
-        'bp-head':           'Pää',
-        'bp-eyes':           'Silmä / Silmät',
-        'bp-ear':            'Korva / Kuulo',
-        'bp-neck':           'Kaula / Niska',
-        'bp-chest':          'Rintakehä',
-        'bp-abdomen':        'Vatsa',
-        'bp-pelvis':         'Lantioseutu',
-        'bp-upper-back':     'Yläselkä',
-        'bp-lower-back':     'Alaselkä',
-        'bp-shoulder-left':  'Vasen olkapää',
-        'bp-shoulder-right': 'Oikea olkapää',
-        'bp-arm-left':       'Vasen käsivarsi',
-        'bp-arm-right':      'Oikea käsivarsi',
-        'bp-hand-left':      'Vasen kämmen',
-        'bp-hand-right':     'Oikea kämmen',
-        'bp-thigh-left':     'Vasen reisi',
-        'bp-thigh-right':    'Oikea reisi',
-        'bp-knee-left':      'Vasen polvi',
-        'bp-knee-right':     'Oikea polvi',
-        'bp-calf-left':      'Vasen pohje',
-        'bp-calf-right':     'Oikea pohje',
-        'bp-ankle-left':     'Vasen nilkka',
-        'bp-ankle-right':    'Oikea nilkka',
-        'bp-foot-left':      'Vasen jalkaterä',
-        'bp-foot-right':     'Oikea jalkaterä',
-    };
-
-    // Käytä PHP:ltä annettuja käännettyjä termejä, tai fallback suomeen
-    var PART_LABELS = (typeof window.BODY_MAP_LABELS === 'object' && window.BODY_MAP_LABELS)
-        ? window.BODY_MAP_LABELS
-        : PART_LABELS_FALLBACK;
-
-    // i18n-merkkijonot laskurille ja poistonapille
+    // i18n-merkkijonot laskurille ja poistonapille (PHP kirjoittaa window.BODY_MAP_I18N)
     var I18N = {
         countSingle: '1 ruumiinosa valittu',
         countPlural:  '{n} ruumiinosaa valittu',
@@ -51,7 +17,7 @@
         if (window.BODY_MAP_I18N.removeLabel)  { I18N.removeLabel  = window.BODY_MAP_I18N.removeLabel; }
     }
 
-    // Käytössä olevat valinnat (svg_id-joukko)
+    // Käytössä olevat valinnat (canonical svg_id -joukko, vastaa <select>-optionin value-arvoa)
     const selected = new Set();
 
     // DOM-viitteet (alustetaan myöhemmin)
@@ -73,18 +39,10 @@
         // Renderöi tagit heti sivun latautuessa (editointitila)
         renderTags();
 
-        // SVG-klikkaukset — etupuoli (id:lliset osat)
+        // SVG-klikkaukset — kaikki .sf-bp[id]-elementit (etu- ja takapuoli)
         modal.querySelectorAll('.sf-bp[id]').forEach(function (part) {
             part.addEventListener('click', function () {
-                togglePart(this.id);
-            });
-        });
-
-        // SVG-klikkaukset — takapuoli (viittaavat id:llisiin osiin)
-        modal.querySelectorAll('.sf-bp-back-ref').forEach(function (part) {
-            part.addEventListener('click', function () {
-                var ref = this.dataset.bpRef;
-                if (ref) togglePart(ref);
+                togglePart(getCanonicalId(this.id));
             });
         });
 
@@ -112,6 +70,22 @@
         }
     }
 
+    /**
+     * Palauttaa kanonisen (dropdowniin tallennetun) tunnuksen SVG-elementin id:stä.
+     * Takapuolen elementit päättyvät '-back'. Jos poistetulla päätteellä löytyy
+     * dropdown-option (esim. bp-hand-left ← bp-hand-left-back), palautetaan
+     * etupuolen tunnus. Muutoin palautetaan id sellaisenaan (esim. bp-upper-back).
+     */
+    function getCanonicalId(svgId) {
+        if (svgId.endsWith('-back')) {
+            var withoutBack = svgId.slice(0, -5);
+            if (select && select.querySelector('option[value="' + withoutBack + '"]')) {
+                return withoutBack;
+            }
+        }
+        return svgId;
+    }
+
     /** Lataa valinnat piilotetusta selectistä (editointitila) */
     function loadFromHiddenSelect() {
         if (!hiddenSelect) return;
@@ -124,28 +98,27 @@
         updateCount();
     }
 
-    /** Toggle yksittäinen ruumiinosa */
-    function togglePart(svgId) {
-        if (selected.has(svgId)) {
-            selected.delete(svgId);
+    /** Toggle yksittäinen ruumiinosa kanonisella tunnuksella */
+    function togglePart(canonicalId) {
+        if (selected.has(canonicalId)) {
+            selected.delete(canonicalId);
         } else {
-            selected.add(svgId);
+            selected.add(canonicalId);
         }
         refreshAllSvg();
         refreshDropdown();
         updateCount();
     }
 
-    /** Synkronoi SVG-elementtien .selected-luokka */
+    /**
+     * Synkronoi SVG-elementtien .selected-luokka.
+     * Sekä etupuolen elementit (id = canonicalId) että takapuolen elementit
+     * (id = canonicalId + '-back') saavat selected-luokan, kun canonicalId on valittu.
+     */
     function refreshAllSvg() {
-        // Etupuolen id:lliset osat
         modal.querySelectorAll('.sf-bp[id]').forEach(function (el) {
-            el.classList.toggle('selected', selected.has(el.id));
-        });
-        // Takapuolen viittaukset
-        modal.querySelectorAll('.sf-bp-back-ref').forEach(function (el) {
-            var ref = el.dataset.bpRef;
-            if (ref) el.classList.toggle('selected', selected.has(ref));
+            var canonical = getCanonicalId(el.id);
+            el.classList.toggle('selected', selected.has(canonical));
         });
     }
 
@@ -180,9 +153,16 @@
         }
     }
 
-    /** Hae näyttönimi svg_id:lle */
-    function getLabel(svgId) {
-        return PART_LABELS[svgId] || svgId;
+    /**
+     * Hae näyttönimi kanoniselle tunnukselle suoraan <select>-elementin
+     * <option>-tekstisisällöstä (monikielisyys toimii automaattisesti).
+     */
+    function getLabel(canonicalId) {
+        if (select) {
+            var opt = select.querySelector('option[value="' + canonicalId + '"]');
+            if (opt) return opt.textContent.trim();
+        }
+        return canonicalId;
     }
 
     /** Tallenna valinnat piilotettuun selectiin ja renderöi tagit */
@@ -194,12 +174,11 @@
     /** Kirjoita valinnat piilotettuun selectiin */
     function updateHiddenSelect() {
         if (!hiddenSelect) return;
-        // Tyhjennä ensin
         hiddenSelect.innerHTML = '';
-        selected.forEach(function (svgId) {
+        selected.forEach(function (canonicalId) {
             var opt = document.createElement('option');
-            opt.value = svgId;
-            opt.textContent = getLabel(svgId);
+            opt.value = canonicalId;
+            opt.textContent = getLabel(canonicalId);
             opt.selected = true;
             hiddenSelect.appendChild(opt);
         });
@@ -212,21 +191,21 @@
 
         if (selected.size === 0) return;
 
-        selected.forEach(function (svgId) {
+        selected.forEach(function (canonicalId) {
             var tag = document.createElement('span');
             tag.className = 'sf-injury-tag';
-            tag.dataset.svgId = svgId;
+            tag.dataset.svgId = canonicalId;
 
-            var label = document.createTextNode(getLabel(svgId));
+            var label = document.createTextNode(getLabel(canonicalId));
             tag.appendChild(label);
 
             var removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'sf-injury-tag-remove';
-            removeBtn.setAttribute('aria-label', I18N.removeLabel + ' ' + getLabel(svgId));
+            removeBtn.setAttribute('aria-label', I18N.removeLabel + ' ' + getLabel(canonicalId));
             removeBtn.innerHTML = '\u00D7'; // ×
             removeBtn.addEventListener('click', function () {
-                selected.delete(svgId);
+                selected.delete(canonicalId);
                 refreshAllSvg();
                 refreshDropdown();
                 updateHiddenSelect();
@@ -262,3 +241,4 @@
     // Julkinen rajapinta
     window.BodyMap = { init: init, refresh: refreshModalState };
 })();
+
