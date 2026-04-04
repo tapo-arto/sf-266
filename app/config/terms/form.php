@@ -993,7 +993,7 @@ return [
 ],
 'source_flash_from_label' => [
     'fi' => 'Tiedotteesta',
-    'sv' => 'Från tiedote',
+    'sv' => 'Från meddelandet',
     'en' => 'From flash',
     'it' => 'Dal flash',
     'el' => 'Από flash',

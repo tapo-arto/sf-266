@@ -421,7 +421,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
                 <?php if ($sourceFlash): ?>
                     <br>
                     <span style="color: #666; font-size: 13px;">
-                        <?= htmlspecialchars(sf_term('source_flash_from_label', $uiLang) ?? 'Tiedotteesta', ENT_QUOTES, 'UTF-8') ?>: <strong>"<?= htmlspecialchars($sourceFlash['title'] ?? '') ?>"</strong>
+                        <?= htmlspecialchars(sf_term('source_flash_from_label', $uiLang) ?: 'Tiedotteesta', ENT_QUOTES, 'UTF-8') ?>: <strong>"<?= htmlspecialchars($sourceFlash['title'] ?? '') ?>"</strong>
                         (ID #<?= (int)$sourceFlash['id'] ?>, <?= $typeEmoji ?> <?= htmlspecialchars($typeLabel) ?>, <?= htmlspecialchars($sourceFlash['site'] ?? '') ?>)
                     </span>
                 <?php endif; ?>
