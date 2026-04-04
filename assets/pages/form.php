@@ -1533,14 +1533,14 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
     <!-- Translation child mode footer -->
     <div class="sf-step6-footer">
       <?php
-      // Show only "Tallenna" when editing a translation child that has progressed past draft/request_info
+      // Add "Tallenna" (sfSaveInline) as an extra button when editing past draft/request_info state
       $showSendToReview = ! $editing
           || $state_val === 'draft'
           || $state_val === 'request_info'
           || $state_val === '';
       $actionUrl = $base . '/app/api/save_flash.php';
       ?>
-      <?php if (! ($editing && ! $showSendToReview) && $isInBundle): ?>
+      <?php if ($isInBundle): ?>
         <!-- Bundle info bar above the button row -->
         <div class="sf-bundle-info-bar">
           <span class="sf-bundle-info-label">
@@ -1555,7 +1555,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
         </button>
         <div class="sf-step6-footer-right">
           <?php if ($editing && ! $showSendToReview): ?>
-            <!-- Editing a translation child past draft/request_info state – only show Save -->
+            <!-- Extra inline-save button when past draft/request_info state -->
             <button
               type="button"
               id="sfSaveInline"
@@ -1565,7 +1565,8 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
             >
               <?= htmlspecialchars(sf_term('btn_save', $uiLang), ENT_QUOTES, 'UTF-8') ?>
             </button>
-          <?php elseif ($isInBundle): ?>
+          <?php endif; ?>
+          <?php if ($isInBundle): ?>
             <!-- Bundle mode: save draft + add language + send-all -->
             <button
               type="submit"
