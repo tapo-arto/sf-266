@@ -172,6 +172,26 @@ if (function_exists('sf_mail_comment_notifications')) {
     );
 }
 
+// @mention notifications: users explicitly tagged in the comment
+$mentionedIds = [];
+if (!empty($_POST['mentioned_user_ids']) && is_array($_POST['mentioned_user_ids'])) {
+    foreach ($_POST['mentioned_user_ids'] as $mid) {
+        $mid = (int)$mid;
+        if ($mid > 0) {
+            $mentionedIds[] = $mid;
+        }
+    }
+}
+if (!empty($mentionedIds) && function_exists('sf_mail_mention_notifications')) {
+    sf_mail_mention_notifications(
+        $pdo,
+        $logFlashId,
+        $message,
+        $userId ? (int)$userId : null,
+        $mentionedIds
+    );
+}
+
 // Jos ollaan viestintävaiheessa
 if ($currentState === 'to_comms' && function_exists('sf_current_user_has_role')) {
     if (sf_current_user_has_role('comms') && function_exists('sf_mail_comms_comment_to_safety')) {

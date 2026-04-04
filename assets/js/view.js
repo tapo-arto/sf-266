@@ -1589,3 +1589,271 @@
         });
     }
 })();
+// =========================
+// @mention autocomplete in comment textarea
+// =========================
+(function () {
+    'use strict';
+
+    var mentionedUserIds = new Set();
+    var dropdownVisible  = false;
+    var activeIndex      = -1;
+    var fetchTimer       = null;
+
+    function getTextarea() {
+        return document.getElementById('commentMessage');
+    }
+
+    function getDropdown() {
+        return document.getElementById('mentionDropdown');
+    }
+
+    function getMentionContainer() {
+        return document.getElementById('mentionedUsersContainer');
+    }
+
+    function getForm() {
+        return document.getElementById('commentForm');
+    }
+
+    function getBaseUrl() {
+        return (window.SF_BASE_URL || '').replace(/\/$/, '');
+    }
+
+    /**
+     * Return the @mention fragment that the cursor is currently inside, or null.
+     * A valid trigger: '@' preceded by start-of-string or whitespace, with the
+     * query text (after '@') containing at most one space and no two consecutive spaces.
+     */
+    function getMentionQuery(textarea) {
+        var val    = textarea.value;
+        var cursor = textarea.selectionStart;
+        var before = val.substring(0, cursor);
+
+        // Find the last '@' before the cursor that is preceded by start or whitespace
+        var atPos = -1;
+        for (var i = cursor - 1; i >= 0; i--) {
+            if (val[i] === '@') {
+                if (i === 0 || /\s/.test(val[i - 1])) {
+                    atPos = i;
+                }
+                break;
+            }
+            // If we hit whitespace before finding '@', there's no active mention
+            if (/\s/.test(val[i])) {
+                break;
+            }
+        }
+
+        if (atPos < 0) return null;
+
+        var query = before.substring(atPos + 1); // text after '@' up to cursor
+
+        // Allow query with at most one space (first + last name), min 1 char
+        if (query.length < 1) return null;
+        if ((query.match(/ /g) || []).length > 1) return null;
+        if (/  /.test(query)) return null; // double space
+
+        return { query: query, atPos: atPos };
+    }
+
+    function showDropdown(items, atPos) {
+        var dropdown = getDropdown();
+        if (!dropdown) return;
+
+        dropdown.innerHTML = '';
+        activeIndex = -1;
+
+        if (items.length === 0) {
+            hideDropdown();
+            return;
+        }
+
+        items.forEach(function (user, idx) {
+            var item = document.createElement('div');
+            item.className  = 'sf-mention-item';
+            item.textContent = user.name;
+            item.dataset.userId   = user.id;
+            item.dataset.userName = user.name;
+            item.dataset.atPos    = atPos;
+            item.setAttribute('role', 'option');
+
+            item.addEventListener('mousedown', function (e) {
+                e.preventDefault(); // prevent textarea blur before we can handle click
+                selectUser(user, atPos);
+            });
+
+            dropdown.appendChild(item);
+        });
+
+        dropdown.style.display = 'block';
+        dropdownVisible = true;
+    }
+
+    function hideDropdown() {
+        var dropdown = getDropdown();
+        if (dropdown) dropdown.style.display = 'none';
+        dropdownVisible = false;
+        activeIndex = -1;
+    }
+
+    function setActiveItem(idx) {
+        var dropdown = getDropdown();
+        if (!dropdown) return;
+        var items = dropdown.querySelectorAll('.sf-mention-item');
+        items.forEach(function (item, i) {
+            item.classList.toggle('sf-mention-item--active', i === idx);
+        });
+        activeIndex = idx;
+    }
+
+    function selectUser(user, atPos) {
+        var textarea = getTextarea();
+        if (!textarea) return;
+
+        var val    = textarea.value;
+        var cursor = textarea.selectionStart;
+
+        // Replace from atPos to cursor with @FullName (add trailing space)
+        var before = val.substring(0, atPos);
+        var after  = val.substring(cursor);
+        var insertion = '@' + user.name + ' ';
+        textarea.value = before + insertion + after;
+
+        // Move cursor to end of inserted text
+        var newPos = (before + insertion).length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+
+        addMentionedUser(user);
+        hideDropdown();
+    }
+
+    function addMentionedUser(user) {
+        if (mentionedUserIds.has(user.id)) return;
+        mentionedUserIds.add(user.id);
+
+        var container = getMentionContainer();
+        if (!container) return;
+
+        var input = document.createElement('input');
+        input.type  = 'hidden';
+        input.name  = 'mentioned_user_ids[]';
+        input.value = user.id;
+        input.dataset.mentionId = user.id;
+        container.appendChild(input);
+    }
+
+    function clearMentionedUsers() {
+        mentionedUserIds.clear();
+        var container = getMentionContainer();
+        if (container) container.innerHTML = '';
+    }
+
+    function fetchSuggestions(query, atPos) {
+        clearTimeout(fetchTimer);
+        fetchTimer = setTimeout(function () {
+            var url = getBaseUrl() + '/app/api/users_search.php?query=' + encodeURIComponent(query) + '&limit=8';
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok && Array.isArray(data.users)) {
+                        showDropdown(data.users, atPos);
+                    } else {
+                        hideDropdown();
+                    }
+                })
+                .catch(function () { hideDropdown(); });
+        }, 150);
+    }
+
+    // Attach listeners once the textarea exists
+    function attachListeners() {
+        var textarea = getTextarea();
+        if (!textarea || textarea._sfMentionAttached) return;
+        textarea._sfMentionAttached = true;
+
+        textarea.addEventListener('input', function () {
+            var result = getMentionQuery(textarea);
+            if (result) {
+                fetchSuggestions(result.query, result.atPos);
+            } else {
+                clearTimeout(fetchTimer);
+                hideDropdown();
+            }
+        });
+
+        textarea.addEventListener('keydown', function (e) {
+            if (!dropdownVisible) return;
+            var dropdown = getDropdown();
+            if (!dropdown) return;
+            var items = dropdown.querySelectorAll('.sf-mention-item');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setActiveItem(Math.min(activeIndex + 1, items.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setActiveItem(Math.max(activeIndex - 1, 0));
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                if (activeIndex >= 0 && items[activeIndex]) {
+                    e.preventDefault();
+                    var item = items[activeIndex];
+                    selectUser(
+                        { id: parseInt(item.dataset.userId, 10), name: item.dataset.userName },
+                        parseInt(item.dataset.atPos, 10)
+                    );
+                } else if (e.key === 'Tab') {
+                    hideDropdown();
+                }
+            } else if (e.key === 'Escape') {
+                hideDropdown();
+            }
+        });
+
+        textarea.addEventListener('blur', function () {
+            // Small delay so mousedown on dropdown item can fire first
+            setTimeout(hideDropdown, 150);
+        });
+    }
+
+    // Reset mentioned users whenever the comment modal is opened for a new/reply comment
+    function resetMentions() {
+        clearMentionedUsers();
+        hideDropdown();
+    }
+
+    // Hook into modal opening
+    document.addEventListener('click', function (e) {
+        // New comment (footer button), reply button, or edit button
+        if (
+            e.target.closest('#footerComment') ||
+            e.target.closest('.btn-reply-comment') ||
+            e.target.closest('.btn-edit-comment')
+        ) {
+            // Reset after a tick (the existing handlers run first)
+            setTimeout(function () {
+                resetMentions();
+                attachListeners();
+            }, 0);
+        }
+    });
+
+    // Also reset when the modal close button is used
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-modal-close="modalComment"]')) {
+            resetMentions();
+        }
+    });
+
+    // Attach on DOMContentLoaded in case the textarea is already on the page
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            attachListeners();
+        });
+    } else {
+        attachListeners();
+    }
+})();

@@ -4097,3 +4097,31 @@ body.sf-modal-open #previewImageModal .sf-download-buttons {
         padding: 10px;
     }
 }
+/* @mention autocomplete dropdown */
+.sf-mention-dropdown {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 9999;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.sf-mention-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.93rem;
+    color: #111827;
+    transition: background 0.12s ease;
+}
+
+.sf-mention-item:hover,
+.sf-mention-item.sf-mention-item--active {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
