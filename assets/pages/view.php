@@ -3109,7 +3109,6 @@ function updateDeleteModalContent() {
 <script src="<?= sf_asset_url('assets/js/vendor/html2canvas.min.js', $base) ?>"></script>
 
 <!-- Quill WYSIWYG editor (vendored locally) -->
-<link rel="stylesheet" href="<?= sf_asset_url('assets/css/vendor/quill.snow.css', $base) ?>">
 <script src="<?= sf_asset_url('assets/js/vendor/quill.min.js', $base) ?>"></script>
 <script src="<?= sf_asset_url('assets/js/vendor/purify.min.js', $base) ?>"></script>
 
