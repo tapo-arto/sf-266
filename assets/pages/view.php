@@ -96,6 +96,19 @@ try {
 
 // Load additional info entries for this flash
 $additionalInfoEntries = [];
+
+/**
+ * Sanitize HTML content from the additional info WYSIWYG editor.
+ * Strips all disallowed tags and removes all attributes from allowed tags.
+ */
+function sf_sanitize_ai_html(string $html): string {
+    $allowed = '<p><br><strong><em><u><ol><ul><li><span>';
+    $html = strip_tags($html, $allowed);
+    // Remove all attributes from the remaining allowed tags (prevents onclick, style, etc.)
+    $html = preg_replace('/<(\w+)\s[^>]*>/', '<$1>', $html);
+    return $html;
+}
+
 try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS sf_flash_additional_info (
@@ -1434,7 +1447,7 @@ $iconBase = $base .'/assets/img/icons/';
                                             <?php endif; ?>
                                         </div>
                                         <div class="sf-comment-body">
-                                            <?= strip_tags($aiEntry['content'], '<p><br><strong><em><u><ol><ul><li><span>') ?>
+                                            <?= sf_sanitize_ai_html($aiEntry['content']) ?>
                                         </div>
                                     </div>
                                 </div>
@@ -4199,8 +4212,8 @@ function closePublishSingleModal() {
         if (typeof DOMPurify !== 'undefined') {
             return DOMPurify.sanitize(html, { ALLOWED_TAGS: SAFE_TAGS, ALLOWED_ATTR: [] });
         }
-        // Fallback: return empty string if DOMPurify is unavailable
-        return '';
+        // DOMPurify not loaded — block submission to prevent unsanitized content
+        return null;
     }
 
     function escapeHtml(str) {
@@ -4247,7 +4260,7 @@ function closePublishSingleModal() {
         var q = getQuill();
         if (q) {
             if (prefillHtml) {
-                q.clipboard.dangerouslyPasteHTML(prefillHtml);
+                q.clipboard.dangerouslyPasteHTML(sanitizeHtml(prefillHtml));
             } else {
                 q.setContents([]);
             }
@@ -4307,14 +4320,22 @@ function closePublishSingleModal() {
         var editIdEl    = document.getElementById('sfAdditionalInfoEditId');
         var status      = document.getElementById('sfAdditionalInfoStatus');
         var submitBtn   = document.getElementById('sfAdditionalInfoSubmitBtn');
-        var list        = document.getElementById('sfAdditionalInfoList');
         var editId      = editIdEl ? editIdEl.value.trim() : '';
 
         var q = getQuill();
-        var content = q ? q.root.innerHTML.trim() : '';
-        // Treat Quill's empty placeholder as empty
-        if (content === '<p><br></p>' || content === '<p></p>') { content = ''; }
+        // Use getText() to reliably check if the editor is empty (strips all HTML)
+        var plainText = q ? q.getText().trim() : '';
+        if (!plainText) { return; }
 
+        // Get and sanitize the HTML content before sending
+        var content = q ? sanitizeHtml(q.root.innerHTML) : '';
+        if (content === null) {
+            if (status) {
+                status.textContent = aiMsgs.error;
+                status.style.color = '#dc2626';
+            }
+            return;
+        }
         if (!content) { return; }
 
         if (submitBtn) { submitBtn.disabled = true; }
