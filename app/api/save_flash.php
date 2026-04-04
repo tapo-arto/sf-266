@@ -718,6 +718,45 @@ try {
     $pdo->commit();
 
     // =========================================================================
+    // LOUKKAANTUNEET RUUMIINOSAT (body parts) — tallennetaan pivot-tauluun
+    // Vain Ensitiedotteissa (type='red')
+    // =========================================================================
+    if ($type === 'red' && isset($post['injured_parts']) && is_array($post['injured_parts'])) {
+        try {
+            $pdo->beginTransaction();
+
+            // Poista aiemmat valinnat
+            $delStmt = $pdo->prepare("DELETE FROM incident_body_part WHERE incident_id = ?");
+            $delStmt->execute([$newId]);
+
+            if (!empty($post['injured_parts'])) {
+                // Hae validit svg_id → id -parit yhdellä kyselyllä
+                $placeholders = implode(',', array_fill(0, count($post['injured_parts']), '?'));
+                $bpStmt = $pdo->prepare(
+                    "SELECT id, svg_id FROM body_parts WHERE svg_id IN ({$placeholders})"
+                );
+                $bpStmt->execute(array_values($post['injured_parts']));
+                $bpRows = $bpStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (!empty($bpRows)) {
+                    $insertBpStmt = $pdo->prepare(
+                        "INSERT IGNORE INTO incident_body_part (incident_id, body_part_id) VALUES (?, ?)"
+                    );
+                    foreach ($bpRows as $bpRow) {
+                        $insertBpStmt->execute([$newId, (int)$bpRow['id']]);
+                    }
+                }
+            }
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('save_flash: Ruumiinosien tallennus epäonnistui: ' . $e->getMessage());
+            // Ei keskeytä — loukkaantumistietojen tallennus on toissijainen
+        }
+    }
     // EMAIL-ILMOITUKSET (COMMITIN JÄLKEEN)
     // Lähetetään VAIN kun tila muuttuu (SafetyFlash etenee seuraavalle käyttäjäryhmälle)
     // Pelkkä muokkaus (sama tila) EI triggeröi sähköpostia
