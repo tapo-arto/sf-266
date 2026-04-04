@@ -666,20 +666,10 @@ if (!empty($gridBitmap)):
     <div class="section-header"><?= htmlspecialchars($l['additional_info_pdf_section'] ?? 'Lisätiedot tapahtumasta') ?></div>
     <?php foreach ($additionalInfoEntries as $aiEntry): ?>
         <?php
-        $aiFirst = trim((string)($aiEntry['first_name'] ?? ''));
-        $aiLast  = trim((string)($aiEntry['last_name'] ?? ''));
-        $aiName  = trim($aiFirst . ' ' . $aiLast) ?: '';
-        $aiDate  = $aiEntry['created_at'] ?? '';
         $aiContent = trim((string)($aiEntry['content'] ?? ''));
         ?>
         <div style="margin-bottom: 14px;">
-            <?php if ($aiName !== '' || $aiDate !== ''): ?>
-            <div style="font-size: 9pt; color: #6b7280; margin-bottom: 3px;">
-                <?php if ($aiName !== ''): ?><?= htmlspecialchars($aiName) ?><?php endif; ?>
-                <?php if ($aiDate !== ''): ?>&nbsp;&middot;&nbsp;<?= htmlspecialchars($aiDate) ?><?php endif; ?>
-            </div>
-            <?php endif; ?>
-            <p style="margin: 0; line-height: 1.5; color: #333;"><?= nl2br(htmlspecialchars($aiContent)) ?></p>
+            <div style="margin: 0; line-height: 1.5; color: #333;"><?= $aiContent ?></div>
         </div>
     <?php endforeach; ?>
 </div>
