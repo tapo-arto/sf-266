@@ -62,37 +62,37 @@ $bodyMapLabels = [
                 </label>
                 <select id="sfBodyPartSelect" multiple class="sf-body-part-select" size="8">
                     <optgroup label="<?= htmlspecialchars(sf_term('bp_cat_head_neck', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
-                        <option value="bp-head"><?= htmlspecialchars(sf_term('bp_head',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-eyes"><?= htmlspecialchars(sf_term('bp_eyes',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-ear"> <?= htmlspecialchars(sf_term('bp_ear',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-neck"><?= htmlspecialchars(sf_term('bp_neck',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-head"><?= htmlspecialchars(sf_term('bp_head', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-eyes"><?= htmlspecialchars(sf_term('bp_eyes', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-ear"><?= htmlspecialchars(sf_term('bp_ear',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-neck"><?= htmlspecialchars(sf_term('bp_neck', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                     </optgroup>
                     <optgroup label="<?= htmlspecialchars(sf_term('bp_cat_torso', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
-                        <option value="bp-chest">     <?= htmlspecialchars(sf_term('bp_chest',      $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-abdomen">   <?= htmlspecialchars(sf_term('bp_abdomen',    $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-pelvis">    <?= htmlspecialchars(sf_term('bp_pelvis',     $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-chest"><?= htmlspecialchars(sf_term('bp_chest',      $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-abdomen"><?= htmlspecialchars(sf_term('bp_abdomen',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-pelvis"><?= htmlspecialchars(sf_term('bp_pelvis',    $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                         <option value="bp-upper-back"><?= htmlspecialchars(sf_term('bp_upper_back', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                         <option value="bp-lower-back"><?= htmlspecialchars(sf_term('bp_lower_back', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                     </optgroup>
                     <optgroup label="<?= htmlspecialchars(sf_term('bp_cat_upper_limbs', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
-                        <option value="bp-shoulder-left"> <?= htmlspecialchars(sf_term('bp_shoulder_left',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-shoulder-left"><?= htmlspecialchars(sf_term('bp_shoulder_left',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                         <option value="bp-shoulder-right"><?= htmlspecialchars(sf_term('bp_shoulder_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-arm-left">  <?= htmlspecialchars(sf_term('bp_arm_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-arm-right"> <?= htmlspecialchars(sf_term('bp_arm_right',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-hand-left"> <?= htmlspecialchars(sf_term('bp_hand_left',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-arm-left"><?= htmlspecialchars(sf_term('bp_arm_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-arm-right"><?= htmlspecialchars(sf_term('bp_arm_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-hand-left"><?= htmlspecialchars(sf_term('bp_hand_left', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                         <option value="bp-hand-right"><?= htmlspecialchars(sf_term('bp_hand_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                     </optgroup>
                     <optgroup label="<?= htmlspecialchars(sf_term('bp_cat_lower_limbs', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
-                        <option value="bp-thigh-left"> <?= htmlspecialchars(sf_term('bp_thigh_left',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-thigh-left"><?= htmlspecialchars(sf_term('bp_thigh_left',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                         <option value="bp-thigh-right"><?= htmlspecialchars(sf_term('bp_thigh_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-knee-left">  <?= htmlspecialchars(sf_term('bp_knee_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-knee-right"> <?= htmlspecialchars(sf_term('bp_knee_right',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-calf-left">  <?= htmlspecialchars(sf_term('bp_calf_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-calf-right"> <?= htmlspecialchars(sf_term('bp_calf_right',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-ankle-left"> <?= htmlspecialchars(sf_term('bp_ankle_left',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-knee-left"><?= htmlspecialchars(sf_term('bp_knee_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-knee-right"><?= htmlspecialchars(sf_term('bp_knee_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-calf-left"><?= htmlspecialchars(sf_term('bp_calf_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-calf-right"><?= htmlspecialchars(sf_term('bp_calf_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-ankle-left"><?= htmlspecialchars(sf_term('bp_ankle_left', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                         <option value="bp-ankle-right"><?= htmlspecialchars(sf_term('bp_ankle_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-foot-left">  <?= htmlspecialchars(sf_term('bp_foot_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
-                        <option value="bp-foot-right"> <?= htmlspecialchars(sf_term('bp_foot_right',  $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-foot-left"><?= htmlspecialchars(sf_term('bp_foot_left',   $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="bp-foot-right"><?= htmlspecialchars(sf_term('bp_foot_right', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
                     </optgroup>
                 </select>
                 <p class="sf-help-text">
