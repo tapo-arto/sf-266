@@ -660,5 +660,30 @@ if (!empty($gridBitmap)):
 </div>
 <?php endif; ?>
 
+<?php if (!empty($additionalInfoEntries)): ?>
+<div class="page-break"></div>
+<div class="section" style="margin-top: 0;">
+    <div class="section-header">Lisätiedot tapahtumasta</div>
+    <?php foreach ($additionalInfoEntries as $aiEntry): ?>
+        <?php
+        $aiFirst = trim((string)($aiEntry['first_name'] ?? ''));
+        $aiLast  = trim((string)($aiEntry['last_name'] ?? ''));
+        $aiName  = trim($aiFirst . ' ' . $aiLast) ?: '';
+        $aiDate  = $aiEntry['created_at'] ?? '';
+        $aiContent = trim((string)($aiEntry['content'] ?? ''));
+        ?>
+        <div class="content-box" style="margin-bottom: 12px;">
+            <?php if ($aiName !== '' || $aiDate !== ''): ?>
+            <div style="font-size: 9pt; color: #6b7280; margin-bottom: 4px;">
+                <?php if ($aiName !== ''): ?><?= htmlspecialchars($aiName) ?><?php endif; ?>
+                <?php if ($aiDate !== ''): ?>&nbsp;&middot;&nbsp;<?= htmlspecialchars($aiDate) ?><?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <div><?= nl2br(htmlspecialchars($aiContent)) ?></div>
+        </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 </body>
 </html>
