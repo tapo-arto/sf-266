@@ -1416,13 +1416,21 @@ $iconBase = $base .'/assets/img/icons/';
                                                 <span class="sf-comment-time">&middot; <?= htmlspecialchars($aiEntry['created_at'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
                                             </div>
                                             <?php if ($aiIsOwn): ?>
-                                            <button type="button"
-                                                    class="sf-comment-action-btn btn-edit-additional-info"
-                                                    data-ai-id="<?= (int)$aiEntry['id'] ?>"
-                                                    data-content="<?= htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8') ?>">
-                                                <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">
-                                                <?= htmlspecialchars(sf_term('comment_edit', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-                                            </button>
+                                            <div class="sf-comment-actions">
+                                                <button type="button"
+                                                        class="sf-comment-action-btn btn-edit-additional-info"
+                                                        data-ai-id="<?= (int)$aiEntry['id'] ?>"
+                                                        data-content="<?= htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8') ?>">
+                                                    <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">
+                                                    <?= htmlspecialchars(sf_term('comment_edit', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                                                </button>
+                                                <button type="button"
+                                                        class="sf-comment-action-btn btn-delete-additional-info sf-text-danger"
+                                                        data-ai-id="<?= (int)$aiEntry['id'] ?>">
+                                                    <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/delete.svg" alt="" class="sf-action-icon">
+                                                    <?= htmlspecialchars(sf_term('comment_delete', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                                                </button>
+                                            </div>
                                             <?php endif; ?>
                                         </div>
                                         <div class="sf-comment-body">
@@ -4136,13 +4144,19 @@ function closePublishSingleModal() {
     var csrfToken        = window.SF_CSRF_TOKEN || '';
     var additionalApiUrl = '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/app/api/save_additional_info.php';
 
+    var deleteApiUrl = '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/app/api/delete_additional_info.php';
+
     var aiMsgs = {
-        saved:         <?= json_encode(sf_term('additional_info_saved', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
-        error:         <?= json_encode(sf_term('additional_info_save_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
-        unknownAuthor: <?= json_encode(sf_term('additional_info_unknown_author', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
-        titleAdd:      <?= json_encode(sf_term('additional_info_modal_add_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
-        titleEdit:     <?= json_encode(sf_term('additional_info_modal_edit_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
-        editBtnLabel:  <?= json_encode(sf_term('comment_edit', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        saved:            <?= json_encode(sf_term('additional_info_saved', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        error:            <?= json_encode(sf_term('additional_info_save_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        unknownAuthor:    <?= json_encode(sf_term('additional_info_unknown_author', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        titleAdd:         <?= json_encode(sf_term('additional_info_modal_add_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        titleEdit:        <?= json_encode(sf_term('additional_info_modal_edit_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        editBtnLabel:     <?= json_encode(sf_term('comment_edit', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        deleteBtnLabel:   <?= json_encode(sf_term('comment_delete', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        deleteConfirm:    <?= json_encode(sf_term('comment_delete_confirm', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        deleteError:      <?= json_encode(sf_term('additional_info_save_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        baseUrl:          '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>',
     };
 
     function escapeHtml(str) {
@@ -4191,12 +4205,19 @@ function closePublishSingleModal() {
                         '<span class="sf-comment-author">' + escapeHtml(name) + '</span>' +
                         ' <span class="sf-comment-time">&middot; ' + escapeHtml(entry.created_at || '') + '</span>' +
                     '</div>' +
-                    '<button type="button" class="sf-comment-action-btn btn-edit-additional-info"' +
-                        ' data-ai-id="' + escapeHtml(String(entry.id)) + '"' +
-                        ' data-content="' + escapeHtml(entry.content || '') + '">' +
-                        '<img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">' +
-                        ' ' + escapeHtml(aiMsgs.editBtnLabel) +
-                    '</button>' +
+                    '<div class="sf-comment-actions">' +
+                        '<button type="button" class="sf-comment-action-btn btn-edit-additional-info"' +
+                            ' data-ai-id="' + escapeHtml(String(entry.id)) + '"' +
+                            ' data-content="' + escapeHtml(entry.content || '') + '">' +
+                            '<img src="' + escapeHtml(aiMsgs.baseUrl) + '/assets/img/icons/edit.svg" alt="" class="sf-action-icon">' +
+                            ' ' + escapeHtml(aiMsgs.editBtnLabel) +
+                        '</button>' +
+                        '<button type="button" class="sf-comment-action-btn btn-delete-additional-info sf-text-danger"' +
+                            ' data-ai-id="' + escapeHtml(String(entry.id)) + '">' +
+                            '<img src="' + escapeHtml(aiMsgs.baseUrl) + '/assets/img/icons/delete.svg" alt="" class="sf-action-icon">' +
+                            ' ' + escapeHtml(aiMsgs.deleteBtnLabel) +
+                        '</button>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="sf-comment-body">' + escapeHtml(entry.content || '').replace(/\n/g, '<br>') + '</div>' +
             '</div>';
@@ -4239,15 +4260,12 @@ function closePublishSingleModal() {
             })
             .then(function (data) {
                 if (data.ok && data.entry) {
-                    if (editId) {
-                        updateEntryInList(editId, data.entry.content);
-                    } else if (list) {
-                        list.appendChild(renderNewEntry(data.entry));
-                    }
                     closeModal();
+                    document.body.classList.remove('sf-modal-open');
                     if (typeof showNotification === 'function') {
                         showNotification(aiMsgs.saved, 'success');
                     }
+                    setTimeout(function () { window.location.reload(); }, 500);
                 } else {
                     if (status) {
                         status.textContent = aiMsgs.error;
@@ -4293,6 +4311,44 @@ function closePublishSingleModal() {
                 openModal(btn.dataset.aiId, btn.dataset.content);
             });
         }
+
+        // Delete buttons on existing entries (delegated)
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.btn-delete-additional-info');
+            if (!btn) { return; }
+            var aiId = btn.dataset.aiId;
+            if (!aiId) { return; }
+            if (!window.confirm(aiMsgs.deleteConfirm)) { return; }
+            btn.disabled = true;
+            var fd = new FormData();
+            fd.append('id', aiId);
+            fd.append('csrf_token', csrfToken);
+            fetch(deleteApiUrl, { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        var item = btn.closest('.sf-comment-item');
+                        if (item) {
+                            item.style.transition = 'opacity 0.3s';
+                            item.style.opacity = '0';
+                            setTimeout(function () { window.location.reload(); }, 300);
+                        } else {
+                            window.location.reload();
+                        }
+                    } else {
+                        btn.disabled = false;
+                        if (typeof showNotification === 'function') {
+                            showNotification(aiMsgs.deleteError, 'error');
+                        }
+                    }
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    if (typeof showNotification === 'function') {
+                        showNotification(aiMsgs.deleteError, 'error');
+                    }
+                });
+        });
 
         // Close modal on backdrop click
         var modal = document.getElementById('sfAdditionalInfoModal');
