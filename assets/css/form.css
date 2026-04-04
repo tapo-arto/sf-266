@@ -7293,7 +7293,7 @@ body.form-page .sf-form-progress__steps::before {
 
 .sf-step6-footer-right {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     gap: 12px;
     flex-wrap: wrap;
 }
@@ -7304,12 +7304,14 @@ body.form-page .sf-form-progress__steps::before {
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
+    min-height: 48px;
     background: #eff6ff;
     border: 1px solid #bfdbfe;
     border-radius: 6px;
     font-size: 0.875rem;
     color: #1e40af;
     white-space: normal;
+    box-sizing: border-box;
 }
 
 .sf-bundle-info-label {
@@ -7322,7 +7324,9 @@ body.form-page .sf-form-progress__steps::before {
     width: auto;
     padding: 12px 24px;
     min-width: 120px;
-    white-space: normal;
+    min-height: 48px;
+    white-space: nowrap;
+    box-sizing: border-box;
 }
 
 /* ── Type classes: keep dark background only, no static border-top stripe ── */
