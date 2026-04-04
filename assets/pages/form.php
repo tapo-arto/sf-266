@@ -981,12 +981,9 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
     <div id="sf-injury-section" class="hidden">
       <div class="sf-injury-btn-row">
         <button type="button" id="sfBodyMapOpenBtn" class="sf-btn-body-map" data-modal-open="#sfBodyMapModal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="5" r="2.5"/>
-            <path d="M7 8.5a2.5 2.5 0 0 0-2.5 2.5v3A3.5 3.5 0 0 0 8 17.4V22h2v-4h4v4h2v-4.6a3.5 3.5 0 0 0 3.5-3.5v-3A2.5 2.5 0 0 0 17 8.5H7z"/>
-          </svg>
-          Merkitse loukkaantuneet ruumiinosat
+          <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/injury_icon.svg"
+               width="18" height="18" alt="" aria-hidden="true" class="sf-btn-icon">
+          <?= htmlspecialchars(sf_term('body_map_open_btn', $uiLang), ENT_QUOTES, 'UTF-8') ?>
         </button>
       </div>
       <!-- Valitut ruumiinosat näytetään tageina -->

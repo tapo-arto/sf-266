@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <!-- Head -->
+  <circle cx="12" cy="4.5" r="2.5"/>
+  <!-- Body / torso -->
+  <path d="M8 9.5a2.5 2.5 0 0 0-2.5 2.5v2a5.5 5.5 0 0 0 2 4.2V22h3v-3.5h3V22h3v-3.8a5.5 5.5 0 0 0 2-4.2v-2A2.5 2.5 0 0 0 16 9.5H8z"/>
+  <!-- Injury marker (exclamation on body) -->
+  <circle cx="18.5" cy="5.5" r="3" fill="currentColor" stroke="none"/>
+  <line x1="18.5" y1="4" x2="18.5" y2="6" stroke="white" stroke-width="1.4"/>
+  <circle cx="18.5" cy="7.2" r="0.5" fill="white" stroke="none"/>
+</svg>

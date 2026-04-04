@@ -5,8 +5,8 @@
 (function () {
     'use strict';
 
-    // Nimikartta: svg_id -> näytettävä nimi
-    const PART_LABELS = {
+    // Nimikartta: svg_id -> näytettävä nimi (fallback, jos käännetty versio puuttuu)
+    var PART_LABELS_FALLBACK = {
         'bp-head':           'Pää',
         'bp-eyes':           'Silmä / Silmät',
         'bp-ear':            'Korva / Kuulo',
@@ -28,9 +28,28 @@
         'bp-knee-right':     'Oikea polvi',
         'bp-calf-left':      'Vasen pohje',
         'bp-calf-right':     'Oikea pohje',
+        'bp-ankle-left':     'Vasen nilkka',
+        'bp-ankle-right':    'Oikea nilkka',
         'bp-foot-left':      'Vasen jalkaterä',
         'bp-foot-right':     'Oikea jalkaterä',
     };
+
+    // Käytä PHP:ltä annettuja käännettyjä termejä, tai fallback suomeen
+    var PART_LABELS = (typeof window.BODY_MAP_LABELS === 'object' && window.BODY_MAP_LABELS)
+        ? window.BODY_MAP_LABELS
+        : PART_LABELS_FALLBACK;
+
+    // i18n-merkkijonot laskurille ja poistonapille
+    var I18N = {
+        countSingle: '1 ruumiinosa valittu',
+        countPlural:  '{n} ruumiinosaa valittu',
+        removeLabel:  'Poista',
+    };
+    if (typeof window.BODY_MAP_I18N === 'object' && window.BODY_MAP_I18N) {
+        if (window.BODY_MAP_I18N.countSingle) { I18N.countSingle = window.BODY_MAP_I18N.countSingle; }
+        if (window.BODY_MAP_I18N.countPlural)  { I18N.countPlural  = window.BODY_MAP_I18N.countPlural; }
+        if (window.BODY_MAP_I18N.removeLabel)  { I18N.removeLabel  = window.BODY_MAP_I18N.removeLabel; }
+    }
 
     // Käytössä olevat valinnat (svg_id-joukko)
     const selected = new Set();
@@ -152,9 +171,13 @@
     function updateCount() {
         if (!countEl) return;
         var n = selected.size;
-        countEl.textContent = n > 0
-            ? (n === 1 ? '1 ruumiinosa valittu' : n + ' ruumiinosaa valittu')
-            : '';
+        if (n === 0) {
+            countEl.textContent = '';
+        } else if (n === 1) {
+            countEl.textContent = I18N.countSingle;
+        } else {
+            countEl.textContent = I18N.countPlural.replace('{n}', n);
+        }
     }
 
     /** Hae näyttönimi svg_id:lle */
@@ -200,7 +223,7 @@
             var removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'sf-injury-tag-remove';
-            removeBtn.setAttribute('aria-label', 'Poista ' + getLabel(svgId));
+            removeBtn.setAttribute('aria-label', I18N.removeLabel + ' ' + getLabel(svgId));
             removeBtn.innerHTML = '\u00D7'; // ×
             removeBtn.addEventListener('click', function () {
                 selected.delete(svgId);

@@ -41,6 +41,8 @@ INSERT IGNORE INTO `body_parts` (`name`, `category`, `svg_id`, `sort_order`) VAL
   ('Oikea polvi',   'Alaraajat',     'bp-knee-right',     190),
   ('Vasen pohje',   'Alaraajat',     'bp-calf-left',      200),
   ('Oikea pohje',   'Alaraajat',     'bp-calf-right',     210),
+  ('Vasen nilkka',  'Alaraajat',     'bp-ankle-left',     215),
+  ('Oikea nilkka',  'Alaraajat',     'bp-ankle-right',    217),
   ('Vasen jalkaterä','Alaraajat',    'bp-foot-left',      220),
   ('Oikea jalkaterä','Alaraajat',    'bp-foot-right',     230);
 
