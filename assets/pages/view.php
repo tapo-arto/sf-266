@@ -4141,6 +4141,7 @@ function closePublishSingleModal() {
         unknownAuthor: <?= json_encode(sf_term('additional_info_unknown_author', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         titleAdd:      <?= json_encode(sf_term('additional_info_modal_add_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         titleEdit:     <?= json_encode(sf_term('additional_info_modal_edit_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        editBtnLabel:  <?= json_encode(sf_term('comment_edit', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
     };
 
     function escapeHtml(str) {
@@ -4189,7 +4190,7 @@ function closePublishSingleModal() {
                     ' data-ai-id="' + escapeHtml(String(entry.id)) + '"' +
                     ' data-content="' + escapeHtml(entry.content || '') + '">' +
                     '<img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">' +
-                    ' ' + escapeHtml(<?= json_encode(sf_term('comment_edit', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>) +
+                    ' ' + escapeHtml(aiMsgs.editBtnLabel) +
                 '</button>' +
             '</div>' +
             '<div class="sf-ai-content">' + escapeHtml(entry.content || '').replace(/\n/g, '<br>') + '</div>';

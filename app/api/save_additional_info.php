@@ -110,6 +110,16 @@ try {
 
     $editId = (int)($_POST['id'] ?? 0);
 
+    // Shared SELECT for fetching the entry after save/update
+    $fetchSql = "
+        SELECT ai.id, ai.user_id, ai.content, ai.created_at,
+               u.first_name, u.last_name
+        FROM sf_flash_additional_info ai
+        LEFT JOIN sf_users u ON u.id = ai.user_id
+        WHERE ai.id = ?
+        LIMIT 1
+    ";
+
     if ($editId > 0) {
         // UPDATE existing entry — verify ownership
         $ownerStmt = $pdo->prepare("SELECT id, user_id FROM sf_flash_additional_info WHERE id = ? AND flash_id = ? LIMIT 1");
@@ -132,16 +142,7 @@ try {
         $upd = $pdo->prepare("UPDATE sf_flash_additional_info SET content = ? WHERE id = ?");
         $upd->execute([$content, $editId]);
 
-        $sel = $pdo->prepare("
-            SELECT ai.id, ai.user_id, ai.content, ai.created_at,
-                   u.first_name, u.last_name
-            FROM sf_flash_additional_info ai
-            LEFT JOIN sf_users u ON u.id = ai.user_id
-            WHERE ai.id = ?
-            LIMIT 1
-        ");
-        $sel->execute([$editId]);
-        $row = $sel->fetch(PDO::FETCH_ASSOC);
+        $rowId = $editId;
 
     } else {
         // INSERT new entry
@@ -150,20 +151,12 @@ try {
             VALUES (?, ?, ?, NOW())
         ");
         $ins->execute([$flashId, $userId, $content]);
-        $newId = (int)$pdo->lastInsertId();
-
-        // Fetch inserted row with author name
-        $sel = $pdo->prepare("
-            SELECT ai.id, ai.user_id, ai.content, ai.created_at,
-                   u.first_name, u.last_name
-            FROM sf_flash_additional_info ai
-            LEFT JOIN sf_users u ON u.id = ai.user_id
-            WHERE ai.id = ?
-            LIMIT 1
-        ");
-        $sel->execute([$newId]);
-        $row = $sel->fetch(PDO::FETCH_ASSOC);
+        $rowId = (int)$pdo->lastInsertId();
     }
+
+    $sel = $pdo->prepare($fetchSql);
+    $sel->execute([$rowId]);
+    $row = $sel->fetch(PDO::FETCH_ASSOC);
 
     echo json_encode(['ok' => true, 'entry' => $row], JSON_UNESCAPED_UNICODE);
 
