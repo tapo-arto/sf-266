@@ -2623,7 +2623,7 @@ body.sf-modal-open {
 
 /* SVG kehokuva */
 .sf-body-svg {
-    width: 130px;
+    width: 170px;
     height: auto;
     overflow: visible;
 }
@@ -2767,13 +2767,15 @@ body.sf-modal-open {
     }
 }
 
-@media (max-width: 599px) {
+@media (max-width: 500px) {
     .sf-body-map-figures {
+        flex-direction: column;
         gap: 1rem;
     }
 
     .sf-body-svg {
-        width: 90px;
+        width: 260px;
+        max-width: 85vw;
     }
 }
 
