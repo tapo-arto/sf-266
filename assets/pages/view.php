@@ -2857,6 +2857,26 @@ function updateDeleteModalContent() {
     </div>
 </div>
 
+<!-- POISTA LISÄTIETO -MODAALI -->
+<div class="sf-modal hidden" id="modalDeleteInfo" role="dialog" aria-modal="true" aria-labelledby="modalDeleteInfoTitle">
+    <div class="sf-modal-content">
+        <h2 id="modalDeleteInfoTitle">
+            <?= htmlspecialchars(sf_term('comment_delete_title', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        </h2>
+        <p>
+            <?= htmlspecialchars(sf_term('comment_delete_confirm', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        </p>
+        <div class="sf-modal-actions">
+            <button type="button" class="sf-btn sf-btn-secondary" data-modal-close="modalDeleteInfo">
+                <?= htmlspecialchars(sf_term('btn_cancel', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
+            <button type="button" class="sf-btn sf-btn-danger" id="modalDeleteInfoConfirm">
+                <?= htmlspecialchars(sf_term('btn_delete', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- DELETE LOG ENTRY MODAL (admin only) -->
 <div class="sf-modal hidden" id="modalDeleteLog" role="dialog" aria-modal="true">
     <div class="sf-modal-content">
@@ -3906,6 +3926,17 @@ document.addEventListener('keydown', function(e) {
             }
         });
     });
+
+    // Activate tab from URL parameter on page load
+    (function () {
+        var allowedTabs = ['comments', 'events', 'additionalInfo', 'versions', 'images'];
+        var urlParams = new URLSearchParams(window.location.search);
+        var initialTab = urlParams.get('tab');
+        if (initialTab && allowedTabs.indexOf(initialTab) !== -1) {
+            var targetTabBtn = document.querySelector('.sf-activity-tab[data-tab="' + initialTab + '"]');
+            if (targetTabBtn) { targetTabBtn.click(); }
+        }
+    })();
     
     /**
      * Close lightbox
@@ -4155,6 +4186,7 @@ function closePublishSingleModal() {
         editBtnLabel:     <?= json_encode(sf_term('comment_edit', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         deleteBtnLabel:   <?= json_encode(sf_term('comment_delete', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         deleteConfirm:    <?= json_encode(sf_term('comment_delete_confirm', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        deleteSuccess:    <?= json_encode(sf_term('comment_deleted', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         deleteError:      <?= json_encode(sf_term('additional_info_save_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         baseUrl:          '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>',
     };
@@ -4265,7 +4297,11 @@ function closePublishSingleModal() {
                     if (typeof showNotification === 'function') {
                         showNotification(aiMsgs.saved, 'success');
                     }
-                    setTimeout(function () { window.location.reload(); }, 500);
+                    setTimeout(function () {
+                        var url = new URL(window.location.href);
+                        url.searchParams.set('tab', 'additionalInfo');
+                        window.location.href = url.toString();
+                    }, 500);
                 } else {
                     if (status) {
                         status.textContent = aiMsgs.error;
@@ -4312,43 +4348,77 @@ function closePublishSingleModal() {
             });
         }
 
-        // Delete buttons on existing entries (delegated)
+        // Delete buttons on existing entries – open app modal for confirmation
+        var pendingDeleteAiId = null;
+
         document.addEventListener('click', function (e) {
             var btn = e.target.closest('.btn-delete-additional-info');
             if (!btn) { return; }
             var aiId = btn.dataset.aiId;
             if (!aiId) { return; }
-            if (!window.confirm(aiMsgs.deleteConfirm)) { return; }
-            btn.disabled = true;
-            var fd = new FormData();
-            fd.append('id', aiId);
-            fd.append('csrf_token', csrfToken);
-            fetch(deleteApiUrl, { method: 'POST', body: fd })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    if (data.ok) {
-                        var item = btn.closest('.sf-comment-item');
-                        if (item) {
-                            item.style.transition = 'opacity 0.3s';
-                            item.style.opacity = '0';
-                            setTimeout(function () { window.location.reload(); }, 300);
+            pendingDeleteAiId = aiId;
+            var deleteModal = document.getElementById('modalDeleteInfo');
+            if (deleteModal) {
+                deleteModal.classList.remove('hidden');
+                document.body.classList.add('sf-modal-open');
+                var focusable = deleteModal.querySelector('button');
+                if (focusable) { focusable.focus({ preventScroll: true }); }
+            }
+        });
+
+        var deleteInfoConfirmBtn = document.getElementById('modalDeleteInfoConfirm');
+        if (deleteInfoConfirmBtn) {
+            deleteInfoConfirmBtn.addEventListener('click', function () {
+                var aiId = pendingDeleteAiId;
+                if (!aiId) { return; }
+                pendingDeleteAiId = null;
+
+                var deleteModal = document.getElementById('modalDeleteInfo');
+                if (deleteModal) {
+                    deleteModal.classList.add('hidden');
+                    if (!document.querySelector('.sf-modal:not(.hidden)')) {
+                        document.body.classList.remove('sf-modal-open');
+                    }
+                }
+
+                var deleteBtn = document.querySelector('.btn-delete-additional-info[data-ai-id="' + aiId + '"]');
+                if (deleteBtn) { deleteBtn.disabled = true; }
+
+                var fd = new FormData();
+                fd.append('id', aiId);
+                fd.append('csrf_token', csrfToken);
+                fetch(deleteApiUrl, { method: 'POST', body: fd })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.ok) {
+                            if (typeof showNotification === 'function') {
+                                showNotification(aiMsgs.deleteSuccess, 'success');
+                            }
+                            var item = deleteBtn ? deleteBtn.closest('.sf-comment-item') : null;
+                            if (item) {
+                                item.style.transition = 'opacity 0.3s';
+                                item.style.opacity = '0';
+                            }
+                            setTimeout(function () {
+                                var url = new URL(window.location.href);
+                                url.searchParams.set('tab', 'additionalInfo');
+                                window.location.href = url.toString();
+                            }, 400);
                         } else {
-                            window.location.reload();
+                            if (deleteBtn) { deleteBtn.disabled = false; }
+                            if (typeof showNotification === 'function') {
+                                showNotification(aiMsgs.deleteError, 'error');
+                            }
                         }
-                    } else {
-                        btn.disabled = false;
+                    })
+                    .catch(function () {
+                        if (deleteBtn) { deleteBtn.disabled = false; }
                         if (typeof showNotification === 'function') {
                             showNotification(aiMsgs.deleteError, 'error');
                         }
-                    }
-                })
-                .catch(function () {
-                    btn.disabled = false;
-                    if (typeof showNotification === 'function') {
-                        showNotification(aiMsgs.deleteError, 'error');
-                    }
-                });
-        });
+                    });
+            });
+        }
 
         // Close modal on backdrop click
         var modal = document.getElementById('sfAdditionalInfoModal');
