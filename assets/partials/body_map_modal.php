@@ -7,21 +7,15 @@
  */
 
 /**
- * Reads a body-part SVG file and returns a <g> element that positions and
- * scales the part's content within the combined figure SVG.
- *
- * Each individual body-part SVG has its own bounding-box viewBox (0 0 w h).
- * A transform="translate(x,y) scale(sx,sy)" maps from that local coordinate
- * space into the combined SVG's coordinate space (viewBox 0 0 300 700).
+ * Reads a body-part SVG file and returns a <g> element wrapping the part's
+ * content. The new SVG files are pre-positioned on a shared 595.28×841.89
+ * canvas, so no transform is needed — each file's paths already carry the
+ * correct absolute coordinates.
  *
  * @param string $id       Element id, e.g. "bp-head"
  * @param string $svgFile  Absolute path to the .svg file
- * @param float  $x        Left edge in the combined figure's coordinate space
- * @param float  $y        Top edge in the combined figure's coordinate space
- * @param float  $w        Desired width  in the combined figure's coordinate space
- * @param float  $h        Desired height in the combined figure's coordinate space
  */
-function buildBodyPartSvg(string $id, string $svgFile, float $x, float $y, float $w, float $h): string
+function buildBodyPartSvg(string $id, string $svgFile): string
 {
     // Validate that the resolved path stays within the body-map asset directory
     $expectedDir = realpath(__DIR__ . '/../../assets/img/body-map');
@@ -35,20 +29,6 @@ function buildBodyPartSvg(string $id, string $svgFile, float $x, float $y, float
 
     $raw = file_get_contents($realFile);
     if ($raw === false || $raw === '') {
-        return '';
-    }
-
-    // Extract viewBox dimensions from the file's own coordinate space
-    if (!preg_match('/viewBox="([^"]+)"/', $raw, $vm)) {
-        return '';
-    }
-    $vbParts = preg_split('/[\s,]+/', trim($vm[1]));
-    if (count($vbParts) !== 4) {
-        return '';
-    }
-    $vbW = (float) $vbParts[2];
-    $vbH = (float) $vbParts[3];
-    if ($vbW <= 0.0 || $vbH <= 0.0 || $w <= 0.0 || $h <= 0.0) {
         return '';
     }
 
@@ -77,89 +57,86 @@ function buildBodyPartSvg(string $id, string $svgFile, float $x, float $y, float
 
     $eId = htmlspecialchars($id, ENT_QUOTES, 'UTF-8');
 
-    // Scale factors: map from the SVG's own viewBox to the desired display size.
-    // All divisors are validated non-zero above.
-    $scaleX = round($w / $vbW, 6);
-    $scaleY = round($h / $vbH, 6);
-    // Cast coordinates to float and verify they are finite before embedding
-    $tx = (float) $x;
-    $ty = (float) $y;
-    if (!is_finite($tx) || !is_finite($ty) || !is_finite($scaleX) || !is_finite($scaleY)) {
-        return '';
-    }
-    $transform = 'translate(' . $tx . ',' . $ty . ') scale(' . $scaleX . ',' . $scaleY . ')';
-    $eTransform = htmlspecialchars($transform, ENT_QUOTES, 'UTF-8');
-
-    return '<g id="' . $eId . '" class="sf-bp" transform="' . $eTransform . '">'
-         . $inner . '</g>';
+    return '<g id="' . $eId . '" class="sf-bp">' . $inner . '</g>';
 }
 
 // Directory containing the individual body-part SVG files
 $bpDir = __DIR__ . '/../../assets/img/body-map/';
 
 // -----------------------------------------------------------------------
-// Layout: position of each body part in the combined SVG (viewBox 0 0 300 700).
-// Each entry: [id, x, y, w, h] — top-left position and display size in the
-// 300 × 700 coordinate space. Since each body-part SVG has a bounding-box
-// viewBox, a translate+scale transform maps it to the correct position.
+// Layout: each entry maps a medical/JS element ID to the SVG file to load.
+// The new SVG files share a common 595.28×841.89 canvas so no positioning
+// transform is needed — the paths carry the correct absolute coordinates.
+//
+// Front side: ID and file name match directly.
+// Back side:  left/right limb pairs are cross-wired because the user named
+//             the files by their visual position on screen (mirrored view),
+//             while the IDs follow the medical convention (patient's own
+//             left/right). Loading the opposite file corrects the mirror.
 // -----------------------------------------------------------------------
 $frontLayout = [
-    // Head & face
-    ['bp-head',            111, 10,  78, 101],
-    ['bp-eyes',            123, 66,  54,  13],
-    ['bp-ear',             117, 40,  67,  22],
-    ['bp-neck',            129,111,  42,  21],
+    // Head & face — bp-head_1.svg is the face-forward head; bp-head.svg is unused
+    ['id' => 'bp-head',           'file' => 'bp-head_1.svg'],
+    ['id' => 'bp-eyes',           'file' => 'bp-eyes.svg'],
+    ['id' => 'bp-ear',            'file' => 'bp-ear.svg'],
+    ['id' => 'bp-neck',           'file' => 'bp-neck.svg'],
     // Torso
-    ['bp-shoulder-left',    64,132,  34,  60],
-    ['bp-shoulder-right',  202,132,  34,  60],
-    ['bp-chest',            98,132, 104,  94],
-    ['bp-abdomen',         103,226,  95,  65],
-    ['bp-pelvis',           97,291, 106,  56],
+    ['id' => 'bp-shoulder-left',  'file' => 'bp-shoulder-left.svg'],
+    ['id' => 'bp-shoulder-right', 'file' => 'bp-shoulder-right.svg'],
+    ['id' => 'bp-chest',          'file' => 'bp-chest.svg'],
+    ['id' => 'bp-abdomen',        'file' => 'bp-abdomen.svg'],
+    ['id' => 'bp-pelvis',         'file' => 'bp-pelvis.svg'],
     // Arms & hands
-    ['bp-arm-left',         57,192,  49, 136],
-    ['bp-arm-right',       194,192,  49, 136],
-    ['bp-hand-left',        60,328,  43,  61],
-    ['bp-hand-right',      198,328,  43,  61],
+    ['id' => 'bp-arm-left',       'file' => 'bp-arm-left.svg'],
+    ['id' => 'bp-arm-right',      'file' => 'bp-arm-right.svg'],
+    ['id' => 'bp-hand-left',      'file' => 'bp-hand-left.svg'],
+    ['id' => 'bp-hand-right',     'file' => 'bp-hand-right.svg'],
     // Legs & feet
-    ['bp-thigh-left',       95,347,  53, 120],
-    ['bp-thigh-right',     152,347,  53, 120],
-    ['bp-knee-left',       104,467,  35,  35],
-    ['bp-knee-right',      161,467,  35,  35],
-    ['bp-calf-left',       104,502,  36, 104],
-    ['bp-calf-right',      161,502,  36, 104],
-    ['bp-ankle-left',      113,606,  18,  21],
-    ['bp-ankle-right',     170,606,  18,  21],
-    ['bp-foot-left',       101,627,  42,  43],
-    ['bp-foot-right',      158,627,  42,  43],
+    ['id' => 'bp-thigh-left',     'file' => 'bp-thigh-left.svg'],
+    ['id' => 'bp-thigh-right',    'file' => 'bp-thigh-right.svg'],
+    ['id' => 'bp-knee-left',      'file' => 'bp-knee-left.svg'],
+    ['id' => 'bp-knee-right',     'file' => 'bp-knee-right.svg'],
+    ['id' => 'bp-calf-left',      'file' => 'bp-calf-left.svg'],
+    ['id' => 'bp-calf-right',     'file' => 'bp-calf-right.svg'],
+    ['id' => 'bp-ankle-left',     'file' => 'bp-ankle-left.svg'],
+    ['id' => 'bp-ankle-right',    'file' => 'bp-ankle-right.svg'],
+    ['id' => 'bp-foot-left',      'file' => 'bp-foot-left.svg'],
+    ['id' => 'bp-foot-right',     'file' => 'bp-foot-right.svg'],
 ];
 
 $backLayout = [
-    // Head & neck
-    ['bp-head-back',           123, 10,  54,  65],
-    ['bp-ear-back',            117, 40,  67,  22],
-    ['bp-neck-back',           123, 75,  54,  20],
-    // Torso
-    ['bp-shoulder-left-back',   64, 95,  34,  60],
-    ['bp-shoulder-right-back', 201, 95,  34,  60],
-    ['bp-upper-back',           98, 95, 103,  97],
-    ['bp-lower-back',          103,192,  95,  65],
-    ['bp-pelvis-back',          97,257, 106,  56],
-    // Arms & hands
-    ['bp-arm-left-back',        57,155,  49, 136],
-    ['bp-arm-right-back',      194,155,  49, 136],
-    ['bp-hand-left-back',       60,291,  43,  61],
-    ['bp-hand-right-back',     198,291,  43,  61],
-    // Legs & feet
-    ['bp-thigh-left-back',      95,313,  53, 120],
-    ['bp-thigh-right-back',    152,313,  53, 120],
-    ['bp-knee-left-back',      104,433,  35,  35],
-    ['bp-knee-right-back',     161,433,  35,  35],
-    ['bp-calf-left-back',      104,468,  36, 104],
-    ['bp-calf-right-back',     161,468,  36, 104],
-    ['bp-ankle-left-back',     113,572,  18,  21],
-    ['bp-ankle-right-back',    170,572,  18,  21],
-    ['bp-foot-left-back',      108,593,  27,  20],
-    ['bp-foot-right-back',     165,593,  27,  20],
+    // Head & neck (centre parts: ID and file match)
+    ['id' => 'bp-head-back',           'file' => 'bp-head-back.svg'],
+    ['id' => 'bp-ear-back',            'file' => 'bp-ear-back.svg'],
+    ['id' => 'bp-neck-back',           'file' => 'bp-neck-back.svg'],
+    // Torso centre parts (ID and file match)
+    ['id' => 'bp-upper-back',          'file' => 'bp-upper-back.svg'],
+    ['id' => 'bp-lower-back',          'file' => 'bp-lower-back.svg'],
+    ['id' => 'bp-pelvis-back',         'file' => 'bp-pelvis-back.svg'],
+    // Shoulders — cross-wired: medical left → visual right file, and vice versa
+    ['id' => 'bp-shoulder-left-back',  'file' => 'bp-shoulder-right-back.svg'],
+    ['id' => 'bp-shoulder-right-back', 'file' => 'bp-shoulder-left-back.svg'],
+    // Arms — cross-wired
+    ['id' => 'bp-arm-left-back',       'file' => 'bp-arm-right-back.svg'],
+    ['id' => 'bp-arm-right-back',      'file' => 'bp-arm-left-back.svg'],
+    // Hands — cross-wired
+    ['id' => 'bp-hand-left-back',      'file' => 'bp-hand-right-back.svg'],
+    ['id' => 'bp-hand-right-back',     'file' => 'bp-hand-left-back.svg'],
+    // Thighs — cross-wired
+    ['id' => 'bp-thigh-left-back',     'file' => 'bp-thigh-right-back.svg'],
+    ['id' => 'bp-thigh-right-back',    'file' => 'bp-thigh-left-back.svg'],
+    // Knees — cross-wired
+    ['id' => 'bp-knee-left-back',      'file' => 'bp-knee-right-back.svg'],
+    ['id' => 'bp-knee-right-back',     'file' => 'bp-knee-left-back.svg'],
+    // Calves — cross-wired
+    ['id' => 'bp-calf-left-back',      'file' => 'bp-calf-right-back.svg'],
+    ['id' => 'bp-calf-right-back',     'file' => 'bp-calf-left-back.svg'],
+    // Ankles — cross-wired
+    ['id' => 'bp-ankle-left-back',     'file' => 'bp-ankle-right-back.svg'],
+    ['id' => 'bp-ankle-right-back',    'file' => 'bp-ankle-left-back.svg'],
+    // Feet — cross-wired
+    ['id' => 'bp-foot-left-back',      'file' => 'bp-foot-right-back.svg'],
+    ['id' => 'bp-foot-right-back',     'file' => 'bp-foot-left-back.svg'],
 ];
 ?>
 <div class="sf-modal hidden" id="sfBodyMapModal" role="dialog" aria-modal="true" aria-labelledby="sfBodyMapModalTitle">
@@ -237,10 +214,10 @@ $backLayout = [
                     <!-- Etupuoli -->
                     <figure class="sf-body-figure">
                         <figcaption><?= htmlspecialchars(sf_term('body_map_front_label', $uiLang), ENT_QUOTES, 'UTF-8') ?></figcaption>
-                        <svg class="sf-body-svg" viewBox="0 0 300 700" xmlns="http://www.w3.org/2000/svg"
-                             aria-label="<?= htmlspecialchars(sf_term('body_map_front_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>" role="img">
-<?php foreach ($frontLayout as [$bpId, $bpX, $bpY, $bpW, $bpH]):
-    echo buildBodyPartSvg($bpId, $bpDir . $bpId . '.svg', $bpX, $bpY, $bpW, $bpH) . "\n";
+                         <svg class="sf-body-svg" viewBox="0 0 595.28 841.89" xmlns="http://www.w3.org/2000/svg"
+                              aria-label="<?= htmlspecialchars(sf_term('body_map_front_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>" role="img">
+<?php foreach ($frontLayout as $bp):
+    echo buildBodyPartSvg($bp['id'], $bpDir . $bp['file']) . "\n";
 endforeach; ?>
 
                         </svg>
@@ -249,11 +226,11 @@ endforeach; ?>
                     <!-- Takapuoli -->
                     <figure class="sf-body-figure">
                         <figcaption><?= htmlspecialchars(sf_term('body_map_back_label', $uiLang), ENT_QUOTES, 'UTF-8') ?></figcaption>
-                        <svg class="sf-body-svg sf-body-svg-back" viewBox="0 0 300 700"
+                        <svg class="sf-body-svg sf-body-svg-back" viewBox="0 0 595.28 841.89"
                              xmlns="http://www.w3.org/2000/svg"
                              aria-label="<?= htmlspecialchars(sf_term('body_map_back_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>" role="img">
-<?php foreach ($backLayout as [$bpId, $bpX, $bpY, $bpW, $bpH]):
-    echo buildBodyPartSvg($bpId, $bpDir . $bpId . '.svg', $bpX, $bpY, $bpW, $bpH) . "\n";
+<?php foreach ($backLayout as $bp):
+    echo buildBodyPartSvg($bp['id'], $bpDir . $bp['file']) . "\n";
 endforeach; ?>
                         </svg>
                     </figure>
