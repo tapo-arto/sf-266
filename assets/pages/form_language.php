@@ -332,6 +332,12 @@ window.SF_FL_CSRF_TOKEN = <?php
     var addLanguageBtn  = document.getElementById('flAddLanguageBtn');
     var sendReviewBtn   = document.getElementById('flSendReviewBtn');
     var saveBtn         = document.getElementById('flSaveBtn');
+    var errorPrefix     = <?= json_encode(sf_term('error_prefix', $uiLang) ?: 'Virhe:', JSON_UNESCAPED_UNICODE) ?>;
+
+    // Helper: show error with i18n prefix
+    function showError(msg) {
+        alert(errorPrefix + ' ' + msg);
+    }
 
     // Helper: submit the form and return JSON result
     async function submitFormAsJson(actionValue) {
@@ -457,7 +463,7 @@ window.SF_FL_CSRF_TOKEN = <?php
             } catch (err) {
                 setLoading(addLanguageBtn, false);
                 setLoading(confirmBtn, false);
-                alert('Virhe: ' + err.message);
+                showError(err.message);
             }
         });
     }
@@ -476,7 +482,7 @@ window.SF_FL_CSRF_TOKEN = <?php
                 window.location.href = baseUrl + '/index.php?page=form&id=' + encodeURIComponent(saveResult.new_id) + '&step=6';
             } catch (err) {
                 setLoading(sendReviewBtn, false);
-                alert('Virhe: ' + err.message);
+                showError(err.message);
             }
         });
     }
@@ -495,7 +501,7 @@ window.SF_FL_CSRF_TOKEN = <?php
                 window.location.href = saveResult.redirect || (baseUrl + '/index.php?page=view&id=' + encodeURIComponent(saveResult.new_id));
             } catch (err) {
                 setLoading(saveBtn, false);
-                alert('Virhe: ' + err.message);
+                showError(err.message);
             }
         });
     }
