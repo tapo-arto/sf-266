@@ -718,7 +718,7 @@ try {
     $pdo->commit();
 
     // =========================================================================
-    // LOUKKAANTUNEET RUUMIINOSAT (body parts) — tallennetaan pivot-tauluun
+    // LOUKKAANTUNEET KEHONOSAT (body parts) — tallennetaan pivot-tauluun
     // Vain Ensitiedotteissa (type='red')
     // =========================================================================
     if ($type === 'red' && isset($post['injured_parts']) && is_array($post['injured_parts'])) {

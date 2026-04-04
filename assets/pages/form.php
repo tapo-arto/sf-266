@@ -977,7 +977,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
       <p class="sf-char-count"><span id="sf-description-count">0</span>/950</p>
     </div>
 
-    <!-- Loukkaantuneet ruumiinosat — näytetään vain Ensitiedotteessa (type=red) -->
+    <!-- Loukkaantuneet kehonosat — näytetään vain Ensitiedotteessa (type=red) -->
     <div id="sf-injury-section" class="hidden">
       <div class="sf-injury-btn-row">
         <button type="button" id="sfBodyMapOpenBtn" class="sf-btn-body-map" data-modal-open="#sfBodyMapModal">
@@ -986,7 +986,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
           <?= htmlspecialchars(sf_term('body_map_open_btn', $uiLang), ENT_QUOTES, 'UTF-8') ?>
         </button>
       </div>
-      <!-- Valitut ruumiinosat näytetään tageina -->
+      <!-- Valitut kehonosat näytetään tageina -->
       <div id="sfInjuryTags" class="sf-injury-tags"></div>
       <!-- Piilotettu select — lähetetään lomakkeen mukana -->
       <select id="sfInjuredPartsHidden" name="injured_parts[]" multiple class="sf-form-hidden"><?php

@@ -6,14 +6,14 @@ return [
 
 /* ---- Modal UI ---- */
 'body_map_modal_title' => [
-    'fi' => 'Merkitse loukkaantuneet ruumiinosat',
+    'fi' => 'Merkitse loukkaantuneet kehonosat',
     'sv' => 'Markera skadade kroppsdelar',
     'en' => 'Mark injured body parts',
     'it' => 'Indica le parti del corpo infortunate',
     'el' => 'Επισημάνετε τραυματισμένα μέρη του σώματος',
 ],
 'body_map_open_btn' => [
-    'fi' => 'Merkitse loukkaantuneet ruumiinosat',
+    'fi' => 'Merkitse loukkaantuneet kehonosat',
     'sv' => 'Markera skadade kroppsdelar',
     'en' => 'Mark injured body parts',
     'it' => 'Indica le parti del corpo infortunate',
@@ -27,7 +27,7 @@ return [
     'el' => 'Κλείσιμο',
 ],
 'body_map_select_label' => [
-    'fi' => 'Valitse ruumiinosat listasta',
+    'fi' => 'Valitse kehonosat listasta',
     'sv' => 'Välj kroppsdelar från listan',
     'en' => 'Select body parts from the list',
     'it' => 'Seleziona le parti del corpo dall\'elenco',
@@ -90,14 +90,14 @@ return [
     'el' => 'Αποτυχία αποθήκευσης',
 ],
 'body_map_count_single' => [
-    'fi' => '1 ruumiinosa valittu',
+    'fi' => '1 kehonosa valittu',
     'sv' => '1 kroppsdel vald',
     'en' => '1 body part selected',
     'it' => '1 parte del corpo selezionata',
     'el' => '1 μέρος σώματος επιλεγμένο',
 ],
 'body_map_count_plural' => [
-    'fi' => '{n} ruumiinosaa valittu',
+    'fi' => '{n} kehonosaa valittu',
     'sv' => '{n} kroppsdelar valda',
     'en' => '{n} body parts selected',
     'it' => '{n} parti del corpo selezionate',
