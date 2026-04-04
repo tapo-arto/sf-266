@@ -539,11 +539,14 @@
         if (isNaN(d.getTime())) return dateStr;
         var diffMs   = Date.now() - d.getTime();
         var diffDays = Math.floor(diffMs / 86400000);
-        if (diffDays === 0) return I18N.today  || 'tänään';
-        if (diffDays === 1) return I18N.yesterday || 'eilen';
-        if (diffDays < 30)  return diffDays + ' pv';
+        if (diffDays === 0) return I18N.today     || '';
+        if (diffDays === 1) return I18N.yesterday || '';
+        if (diffDays < 30) {
+            var tpl = I18N.daysAgo || '{n}';
+            return tpl.replace('{n}', diffDays);
+        }
         var months = Math.floor(diffDays / 30);
-        if (months < 12)    return months + ' kk';
+        if (months < 12) return months + ' kk';
         return Math.floor(months / 12) + ' v';
     }
 

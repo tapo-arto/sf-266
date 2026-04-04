@@ -131,6 +131,7 @@ function dashboardLoadBodySvg(string $svgFile): string
     $inner = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $inner);
     $inner = preg_replace('/\s+on\w+="[^"]*"/i', '', $inner);
     $inner = preg_replace('/\s+on\w+=\'[^\']*\'/i', '', $inner);
+    $inner = preg_replace('/\s+on\w+=\S+/i', '', $inner);
     $inner = preg_replace('/href\s*=\s*["\']?\s*javascript:[^"\'>\s]*/i', '', $inner);
     $inner = preg_replace('/\s+fill="[^"]*"/', '', $inner);
     $inner = preg_replace('/\s+stroke="[^"]*"/', '', $inner);
@@ -551,5 +552,8 @@ window.SF_INJURY_I18N = {
     empty:         <?= json_encode(sf_term('dashboard_injury_empty', $uiLang),          JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
     noMatch:       <?= json_encode(sf_term('dashboard_injury_no_match', $uiLang),       JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
     activeFilter:  <?= json_encode(sf_term('dashboard_injury_active_filter', $uiLang),  JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    today:         <?= json_encode(sf_term('time_ago_today', $uiLang),                  JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    yesterday:     <?= json_encode(sf_term('time_ago_yesterday', $uiLang),              JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    daysAgo:       <?= json_encode(sf_term('time_ago_days', $uiLang),                   JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
 };
 </script>

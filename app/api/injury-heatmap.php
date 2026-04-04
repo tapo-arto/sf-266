@@ -27,7 +27,7 @@ if ($period && !in_array($period, $allowedPeriods, true)) {
 if ($month !== null && ($month < 1 || $month > 12)) {
     $month = null;
 }
-if ($year !== null && ($year < 1900 || $year > 2100)) {
+if ($year !== null && ($year < 1900 || $year > (int)date('Y') + 10)) {
     $year = null;
 }
 
