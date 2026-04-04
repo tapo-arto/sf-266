@@ -206,6 +206,13 @@ return [
     'it' => 'Invia per revisione',
     'el' => 'Αποστολή για έλεγχο',
 ],
+'footer_settings' => [
+    'fi' => 'Asetukset',
+    'sv' => 'Inställningar',
+    'en' => 'Settings',
+    'it' => 'Impostazioni',
+    'el' => 'Ρυθμίσεις',
+],
 'btn_save_translation' => [
     'fi' => 'Tallenna kieliversio',
     'en' => 'Save language version',
