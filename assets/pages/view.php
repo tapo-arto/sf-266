@@ -1991,7 +1991,7 @@ $descAllowed = strip_tags($descProcessed, '<strong><span>');
                             <?php
                             $langData = $supportedLangs[$commsVer['lang']] ?? null;
                             if ($langData): ?>
-                                <img src="<?= htmlspecialchars($base) ?>/assets/img/<?= htmlspecialchars($langData['icon']) ?>" alt="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                                <img src="<?= htmlspecialchars($base) ?>/assets/img/<?= htmlspecialchars($langData['icon']) ?>" alt="<?= htmlspecialchars($langData['label']) ?>" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
                                 <span><?= htmlspecialchars($langData['label']) ?> (<?= htmlspecialchars($commsVer['title']) ?>)</span>
                             <?php else: ?>
                                 <span><?= htmlspecialchars(strtoupper($commsVer['lang'])) ?> (<?= htmlspecialchars($commsVer['title']) ?>)</span>
