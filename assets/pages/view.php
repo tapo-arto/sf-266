@@ -96,6 +96,20 @@ try {
 
 // Load additional info entries for this flash
 $additionalInfoEntries = [];
+
+/**
+ * Sanitize HTML content from the additional info WYSIWYG editor.
+ * Strips all disallowed tags and removes all attributes from allowed tags.
+ * Allowed tags match the SAFE_TAGS list in the client-side JS.
+ */
+function sf_sanitize_ai_html(string $html): string {
+    $allowed = '<p><br><strong><em><u><ol><ul><li><span>';
+    $html = strip_tags($html, $allowed);
+    // Remove all attributes from allowed tags; preserve self-closing slash (e.g. <br />)
+    $html = preg_replace('/<(\w+)(?:\s[^>]*)?(\/?)>/', '<$1$2>', $html);
+    return $html;
+}
+
 try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS sf_flash_additional_info (
@@ -1434,7 +1448,7 @@ $iconBase = $base .'/assets/img/icons/';
                                             <?php endif; ?>
                                         </div>
                                         <div class="sf-comment-body">
-                                            <?= nl2br(htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8')) ?>
+                                            <?= sf_sanitize_ai_html($aiEntry['content']) ?>
                                         </div>
                                     </div>
                                 </div>
@@ -1751,14 +1765,10 @@ include __DIR__ . '/../partials/body_map_modal.php';
         </h2>
         <form id="sfAdditionalInfoForm">
             <input type="hidden" id="sfAdditionalInfoEditId" value="">
-            <label for="sfAdditionalInfoTextarea">
+            <label for="sfAdditionalInfoEditor">
                 <?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
             </label>
-            <textarea
-                id="sfAdditionalInfoTextarea"
-                rows="6"
-                placeholder="<?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>"
-            ></textarea>
+            <div id="sfAdditionalInfoEditor" style="min-height: 140px; background: #fff;" role="textbox" aria-multiline="true" aria-label="<?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>"></div>
             <span id="sfAdditionalInfoStatus" style="display:block; font-size: 0.875rem; min-height: 1.2em;" aria-live="polite"></span>
             <div class="sf-modal-actions">
                 <button type="button" class="sf-btn sf-btn-secondary" data-modal-close="sfAdditionalInfoModal">
@@ -3098,6 +3108,11 @@ function updateDeleteModalContent() {
 <!-- html2canvas tarvitaan kuvan generointiin -->
 <script src="<?= sf_asset_url('assets/js/vendor/html2canvas.min.js', $base) ?>"></script>
 
+<!-- Quill WYSIWYG editor -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css">
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
 <!-- Safetyflash CSS & JS -->
 <link rel="stylesheet" href="<?= sf_asset_url('assets/css/display-ttl.css', $base) ?>">
 <link rel="stylesheet" href="<?= sf_asset_url('assets/css/preview.css', $base) ?>">
@@ -4191,6 +4206,17 @@ function closePublishSingleModal() {
         baseUrl:          '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>',
     };
 
+    var quillEditor = null;
+
+    var SAFE_TAGS = ['P', 'BR', 'STRONG', 'EM', 'U', 'OL', 'UL', 'LI', 'SPAN'];
+    function sanitizeHtml(html) {
+        if (typeof DOMPurify !== 'undefined') {
+            return DOMPurify.sanitize(html, { ALLOWED_TAGS: SAFE_TAGS, ALLOWED_ATTR: [] });
+        }
+        // DOMPurify not loaded — block submission to prevent unsanitized content
+        return null;
+    }
+
     function escapeHtml(str) {
         return String(str)
             .replace(/&/g, '&amp;')
@@ -4200,22 +4226,47 @@ function closePublishSingleModal() {
             .replace(/'/g, '&#39;');
     }
 
-    function openModal(editId, prefillContent) {
+    function getQuill() {
+        if (quillEditor) { return quillEditor; }
+        if (typeof Quill === 'undefined') { return null; }
+        var editorEl = document.getElementById('sfAdditionalInfoEditor');
+        if (!editorEl) { return null; }
+        quillEditor = new Quill('#sfAdditionalInfoEditor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+        return quillEditor;
+    }
+
+    function openModal(editId, prefillHtml) {
         var modal    = document.getElementById('sfAdditionalInfoModal');
         var titleEl  = document.getElementById('sfAdditionalInfoModalTitle');
         var editIdEl = document.getElementById('sfAdditionalInfoEditId');
-        var textarea = document.getElementById('sfAdditionalInfoTextarea');
         var status   = document.getElementById('sfAdditionalInfoStatus');
         if (!modal) { return; }
 
-        editIdEl.value  = editId || '';
-        textarea.value  = prefillContent || '';
+        editIdEl.value = editId || '';
         if (titleEl) { titleEl.textContent = editId ? aiMsgs.titleEdit : aiMsgs.titleAdd; }
         if (status)  { status.textContent = ''; }
 
         modal.classList.remove('hidden');
         document.body.classList.add('sf-modal-open');
-        textarea.focus({ preventScroll: true });
+
+        var q = getQuill();
+        if (q) {
+            if (prefillHtml) {
+                q.clipboard.dangerouslyPasteHTML(sanitizeHtml(prefillHtml));
+            } else {
+                q.setContents([]);
+            }
+            setTimeout(function () { q.focus(); }, 50);
+        }
     }
 
     function closeModal() {
@@ -4230,6 +4281,7 @@ function closePublishSingleModal() {
         var div   = document.createElement('div');
         div.className    = 'sf-comment-item';
         div.dataset.aiId = entry.id;
+        var contentHtml  = sanitizeHtml(entry.content || '');
         div.innerHTML =
             '<div class="sf-comment-content">' +
                 '<div class="sf-comment-header">' +
@@ -4251,7 +4303,7 @@ function closePublishSingleModal() {
                         '</button>' +
                     '</div>' +
                 '</div>' +
-                '<div class="sf-comment-body">' + escapeHtml(entry.content || '').replace(/\n/g, '<br>') + '</div>' +
+                '<div class="sf-comment-body">' + contentHtml + '</div>' +
             '</div>';
         return div;
     }
@@ -4261,19 +4313,32 @@ function closePublishSingleModal() {
         if (!item) { return; }
         var contentEl  = item.querySelector('.sf-comment-body');
         var editBtn    = item.querySelector('.btn-edit-additional-info');
-        if (contentEl) { contentEl.innerHTML = escapeHtml(content).replace(/\n/g, '<br>'); }
+        if (contentEl) { contentEl.innerHTML = sanitizeHtml(content); }
         if (editBtn)   { editBtn.dataset.content = content; }
     }
 
     function submitForm() {
         var editIdEl    = document.getElementById('sfAdditionalInfoEditId');
-        var textarea    = document.getElementById('sfAdditionalInfoTextarea');
         var status      = document.getElementById('sfAdditionalInfoStatus');
         var submitBtn   = document.getElementById('sfAdditionalInfoSubmitBtn');
-        var list        = document.getElementById('sfAdditionalInfoList');
-        var content     = textarea ? textarea.value.trim() : '';
         var editId      = editIdEl ? editIdEl.value.trim() : '';
 
+        var q = getQuill();
+        // Use getText() to reliably check if the editor is empty (strips all HTML)
+        var plainText = q ? q.getText().trim() : '';
+        if (!plainText) { return; }
+
+        // Get and sanitize the HTML content before sending
+        var content = q ? sanitizeHtml(q.root.innerHTML) : '';
+        if (content === null) {
+            // DOMPurify library failed to load — block submission
+            if (status) {
+                status.textContent = aiMsgs.error;
+                status.style.color = '#dc2626';
+            }
+            return;
+        }
+        // Safety net: if sanitizer stripped everything (shouldn't happen when plainText is set)
         if (!content) { return; }
 
         if (submitBtn) { submitBtn.disabled = true; }

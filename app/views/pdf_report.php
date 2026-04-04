@@ -666,20 +666,14 @@ if (!empty($gridBitmap)):
     <div class="section-header"><?= htmlspecialchars($l['additional_info_pdf_section'] ?? 'Lisätiedot tapahtumasta') ?></div>
     <?php foreach ($additionalInfoEntries as $aiEntry): ?>
         <?php
-        $aiFirst = trim((string)($aiEntry['first_name'] ?? ''));
-        $aiLast  = trim((string)($aiEntry['last_name'] ?? ''));
-        $aiName  = trim($aiFirst . ' ' . $aiLast) ?: '';
-        $aiDate  = $aiEntry['created_at'] ?? '';
-        $aiContent = trim((string)($aiEntry['content'] ?? ''));
+        $aiRaw = trim((string)($aiEntry['content'] ?? ''));
+        // Strip disallowed tags and attributes; allowed tags match sf_sanitize_ai_html() in view.php
+        $aiContent = strip_tags($aiRaw, '<p><br><strong><em><u><ol><ul><li><span>');
+        // Remove all attributes; preserve self-closing slash (e.g. <br />)
+        $aiContent = preg_replace('/<(\w+)(?:\s[^>]*)?(\/?)>/', '<$1$2>', $aiContent);
         ?>
         <div style="margin-bottom: 14px;">
-            <?php if ($aiName !== '' || $aiDate !== ''): ?>
-            <div style="font-size: 9pt; color: #6b7280; margin-bottom: 3px;">
-                <?php if ($aiName !== ''): ?><?= htmlspecialchars($aiName) ?><?php endif; ?>
-                <?php if ($aiDate !== ''): ?>&nbsp;&middot;&nbsp;<?= htmlspecialchars($aiDate) ?><?php endif; ?>
-            </div>
-            <?php endif; ?>
-            <p style="margin: 0; line-height: 1.5; color: #333;"><?= nl2br(htmlspecialchars($aiContent)) ?></p>
+            <div style="margin: 0; line-height: 1.5; color: #333;"><?= $aiContent ?></div>
         </div>
     <?php endforeach; ?>
 </div>
