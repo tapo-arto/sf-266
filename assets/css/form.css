@@ -7268,6 +7268,27 @@ body.form-page .sf-form-progress__steps::before {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Bundle info bar shown in the footer when multiple language versions exist */
+.sf-bundle-info-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #1e40af;
+    white-space: nowrap;
+}
+
+.sf-bundle-info-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .sf-step6-footer .sf-btn {
