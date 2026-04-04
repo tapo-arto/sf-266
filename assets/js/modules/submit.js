@@ -336,8 +336,13 @@ async function doSubmit(form, isDraft, isInlineSave = false) {
             const baseUrl = (window.SF_BASE_URL || '').replace(/\/$/, '');
 
             if (isTranslationChild) {
-                // Translation child: redirect to view page to show the result in context
-                window.location.href = `${baseUrl}/index.php?page=view&id=${encodeURIComponent(result.flash_id)}&notice=translation_saved`;
+                if (isDraft) {
+                    // Draft save: stay in edit mode so user can continue editing or add more languages
+                    window.location.href = `${baseUrl}/index.php?page=form&id=${encodeURIComponent(result.flash_id)}&step=6&saved=1`;
+                } else {
+                    // Review/translation save: go to view page to show the result in context
+                    window.location.href = `${baseUrl}/index.php?page=view&id=${encodeURIComponent(result.flash_id)}&notice=translation_saved`;
+                }
             } else {
                 window.location.href = `${baseUrl}/index.php?page=list&bg_process=${encodeURIComponent(result.flash_id)}`;
             }

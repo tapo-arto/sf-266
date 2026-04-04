@@ -46,6 +46,21 @@ if (!empty($baseFlash['translation_group_id'])) {
     $translationGroupId = (int) $baseFlash['id'];
 }
 
+// Hae jo olemassa olevat kieliversiot ryhmässä
+$usedLangsInGroup = [$baseFlash['lang'] ?? 'fi', $newLang];
+try {
+    $groupLangStmt = $pdo->prepare(
+        'SELECT lang FROM sf_flashes WHERE (id = :gid OR translation_group_id = :gid2) AND lang IS NOT NULL'
+    );
+    $groupLangStmt->execute([':gid' => $translationGroupId, ':gid2' => $translationGroupId]);
+    foreach ($groupLangStmt->fetchAll(PDO::FETCH_COLUMN) as $gl) {
+        if ($gl !== '' && !in_array($gl, $usedLangsInGroup, true)) {
+            $usedLangsInGroup[] = $gl;
+        }
+    }
+} catch (Throwable $e) {
+    // Non-critical: if we can't fetch existing langs, just use defaults
+}
 
 $supportedLangs = [
     'fi' => 'Suomi',
@@ -104,6 +119,7 @@ $langLabel = $supportedLangs[$newLang] ?? strtoupper($newLang);
     </div>
 
     <form class="sf-form" method="post" action="<?php echo $config['base_url']; ?>/app/api/save_translation.php">
+        <?php echo sf_csrf_field(); ?>
         <input type="hidden" name="from_id" value="<?php echo (int) $fromId; ?>">
         <input type="hidden" name="lang" value="<?php echo htmlspecialchars($newLang); ?>">
         <input type="hidden" name="translation_group_id" value="<?php echo (int) $translationGroupId; ?>">
@@ -193,11 +209,48 @@ $langLabel = $supportedLangs[$newLang] ?? strtoupper($newLang);
             <a href="index.php?page=view&id=<?php echo (int)$baseFlash['id']; ?>" class="sf-btn sf-btn-secondary">
                 <?php echo htmlspecialchars(sf_term('btn_cancel', $uiLang) ?: 'Peruuta', ENT_QUOTES, 'UTF-8'); ?>
             </a>
-            <button type="submit" class="sf-btn sf-btn-primary">
-                <?php echo htmlspecialchars(sf_term('btn_save_translation', $uiLang) ?: 'Tallenna kieliversio', ENT_QUOTES, 'UTF-8'); ?>
+            <button type="submit" name="fl_action" value="save" class="sf-btn sf-btn-outline" id="flSaveBtn">
+                <?php echo htmlspecialchars(sf_term('btn_save', $uiLang) ?: 'Tallenna', ENT_QUOTES, 'UTF-8'); ?>
+            </button>
+            <button type="button" class="sf-btn sf-btn-outline" id="flAddLanguageBtn"
+                    title="<?php echo htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?: 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8'); ?>">
+                ➕ <?php echo htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?: 'Lisää kieliversio', ENT_QUOTES, 'UTF-8'); ?>
+            </button>
+            <button type="submit" name="fl_action" value="review" class="sf-btn sf-btn-primary" id="flSendReviewBtn">
+                <?php echo htmlspecialchars(sf_term('btn_send_review', $uiLang) ?: 'Lähetä tarkistettavaksi', ENT_QUOTES, 'UTF-8'); ?>
             </button>
         </div>
     </form>
+</div>
+
+<!-- Lisää kieliversio -modaali (form_language) -->
+<div id="flAddLanguageModal" class="sf-modal hidden" role="dialog" aria-modal="true" aria-labelledby="flAddLanguageModalTitle">
+  <div class="sf-modal-overlay" id="flAddLanguageOverlay"></div>
+  <div class="sf-modal-content" style="max-width:480px">
+    <div class="sf-modal-header">
+      <h3 id="flAddLanguageModalTitle">
+        ➕ <?php echo htmlspecialchars(sf_term('add_language_modal_title', $uiLang) ?: 'Lisää kieliversio', ENT_QUOTES, 'UTF-8'); ?>
+      </h3>
+      <button type="button" class="sf-modal-close" id="flAddLanguageClose" aria-label="<?php echo htmlspecialchars(sf_term('btn_close', $uiLang) ?: 'Sulje', ENT_QUOTES, 'UTF-8'); ?>">×</button>
+    </div>
+    <div class="sf-modal-body">
+      <p style="margin:0 0 16px 0;color:#64748b">
+        <?php echo htmlspecialchars(sf_term('add_language_modal_intro', $uiLang) ?: 'Nykyinen versio tallennetaan luonnokseksi. Valitse kieli uudelle kieliversion:', ENT_QUOTES, 'UTF-8'); ?>
+      </p>
+      <div id="flLangOptions" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"></div>
+      <p id="flLangOptionsEmpty" style="display:none;color:#e53e3e;font-size:.9rem">
+        <?php echo htmlspecialchars(sf_term('add_language_all_used', $uiLang) ?: 'Kaikki tuetut kieliversiot on jo luotu.', ENT_QUOTES, 'UTF-8'); ?>
+      </p>
+    </div>
+    <div class="sf-modal-footer" style="display:flex;justify-content:flex-end;gap:8px">
+      <button type="button" class="sf-btn sf-btn-secondary" id="flAddLanguageCancel">
+        <?php echo htmlspecialchars(sf_term('btn_cancel', $uiLang) ?: 'Peruuta', ENT_QUOTES, 'UTF-8'); ?>
+      </button>
+      <button type="button" class="sf-btn sf-btn-primary" id="flAddLanguageConfirm" disabled>
+        <?php echo htmlspecialchars(sf_term('btn_continue', $uiLang) ?: 'Jatka →', ENT_QUOTES, 'UTF-8'); ?>
+      </button>
+    </div>
+  </div>
 </div>
 <!-- Kuvainfo JavaScript-datan muodossa -->
 <script>
@@ -248,7 +301,211 @@ window.SF_SUPPORTED_LANGS = {
     'it': { label: 'IT', icon: 'italian-flag.png' },
     'el': { label: 'EL', icon: 'greece-flag.png' }
 };
+
+// All supported languages
+window.SF_FL_ALL_LANGS = <?php echo json_encode(array_keys($supportedLangs), JSON_UNESCAPED_UNICODE); ?>;
+// Already used languages in this translation group
+window.SF_FL_USED_LANGS = <?php echo json_encode(array_values($usedLangsInGroup), JSON_UNESCAPED_UNICODE); ?>;
+// CSRF token for API calls
+window.SF_FL_CSRF_TOKEN = <?php
+    $csrfToken = '';
+    if (function_exists('sf_csrf_token')) {
+        $csrfToken = sf_csrf_token();
+    } elseif (isset($_SESSION['csrf_token'])) {
+        $csrfToken = $_SESSION['csrf_token'];
+    }
+    echo json_encode($csrfToken);
+?>;
 </script>
+
+<script>
+(function () {
+    'use strict';
+
+    var baseUrl     = (window.SF_BASE_URL || '').replace(/\/$/, '');
+    var allLangs    = window.SF_FL_ALL_LANGS || ['fi', 'sv', 'en', 'it', 'el'];
+    var usedLangs   = window.SF_FL_USED_LANGS || [];
+    var csrfToken   = window.SF_FL_CSRF_TOKEN || '';
+    var langNames   = {fi:'Suomi 🇫🇮', sv:'Ruotsi 🇸🇪', en:'Englanti 🇬🇧', it:'Italia 🇮🇹', el:'Kreikka 🇬🇷'};
+
+    var sfForm = document.querySelector('form.sf-form');
+    var addLanguageBtn  = document.getElementById('flAddLanguageBtn');
+    var sendReviewBtn   = document.getElementById('flSendReviewBtn');
+    var saveBtn         = document.getElementById('flSaveBtn');
+    var errorPrefix     = <?= json_encode(sf_term('error_prefix', $uiLang) ?: 'Virhe:', JSON_UNESCAPED_UNICODE) ?>;
+
+    // Helper: show error with i18n prefix
+    function showError(msg) {
+        alert(errorPrefix + ' ' + msg);
+    }
+
+    // Helper: submit the form and return JSON result
+    async function submitFormAsJson(actionValue) {
+        if (!sfForm) return null;
+        var data = new FormData(sfForm);
+        data.set('fl_action', actionValue);
+        var resp = await fetch(sfForm.action, { method: 'POST', body: data });
+        var text = await resp.text();
+        try { return JSON.parse(text); } catch (e) { return null; }
+    }
+
+    // Helper: show/hide loading state on a button
+    function setLoading(btn, loading) {
+        if (!btn) return;
+        btn.disabled = loading;
+        btn.style.opacity = loading ? '0.6' : '';
+    }
+
+    // "Lisää kieliversio" button: open language selection modal
+    var modal        = document.getElementById('flAddLanguageModal');
+    var overlay      = document.getElementById('flAddLanguageOverlay');
+    var closeBtn     = document.getElementById('flAddLanguageClose');
+    var cancelBtn    = document.getElementById('flAddLanguageCancel');
+    var confirmBtn   = document.getElementById('flAddLanguageConfirm');
+    var optionsDiv   = document.getElementById('flLangOptions');
+    var emptyMsg     = document.getElementById('flLangOptionsEmpty');
+    var selectedLang = null;
+
+    function openModal() {
+        selectedLang = null;
+        if (confirmBtn) confirmBtn.disabled = true;
+        if (optionsDiv) optionsDiv.innerHTML = '';
+
+        var available = allLangs.filter(function (l) { return usedLangs.indexOf(l) === -1; });
+
+        if (available.length === 0) {
+            if (emptyMsg) emptyMsg.style.display = 'block';
+            if (optionsDiv) optionsDiv.style.display = 'none';
+        } else {
+            if (emptyMsg) emptyMsg.style.display = 'none';
+            if (optionsDiv) optionsDiv.style.display = 'flex';
+            available.forEach(function (lang) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'sf-lang-option-btn';
+                btn.dataset.lang = lang;
+                btn.textContent = langNames[lang] || lang.toUpperCase();
+                btn.style.cssText = 'padding:10px 18px;border:2px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer;font-size:1rem;transition:all .15s';
+                btn.addEventListener('click', function () {
+                    if (optionsDiv) {
+                        optionsDiv.querySelectorAll('.sf-lang-option-btn').forEach(function (b) {
+                            b.style.borderColor = '#cbd5e1';
+                            b.style.background  = '#fff';
+                            b.style.fontWeight  = '';
+                        });
+                    }
+                    btn.style.borderColor = '#2563eb';
+                    btn.style.background  = '#eff6ff';
+                    btn.style.fontWeight  = '600';
+                    selectedLang = lang;
+                    if (confirmBtn) confirmBtn.disabled = false;
+                });
+                if (optionsDiv) optionsDiv.appendChild(btn);
+            });
+        }
+
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.classList.add('sf-modal-open');
+        }
+    }
+
+    function closeModal() {
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.classList.remove('sf-modal-open');
+        }
+    }
+
+    if (addLanguageBtn) addLanguageBtn.addEventListener('click', openModal);
+    if (closeBtn)       closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn)      cancelBtn.addEventListener('click', closeModal);
+    if (overlay)        overlay.addEventListener('click', closeModal);
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async function () {
+            if (!selectedLang) return;
+            closeModal();
+
+            setLoading(addLanguageBtn, true);
+            setLoading(confirmBtn, true);
+
+            try {
+                // 1. Save current translation form
+                var saveResult = await submitFormAsJson('save');
+                if (!saveResult || !saveResult.success) {
+                    throw new Error((saveResult && saveResult.error) ? saveResult.error : 'Tallennus epäonnistui');
+                }
+
+                var newId = saveResult.new_id;
+
+                // 2. Create another language draft using bundle_add_language API
+                var bundleData = new FormData();
+                bundleData.append('source_id', newId);
+                bundleData.append('target_lang', selectedLang);
+                bundleData.append('csrf_token', csrfToken);
+
+                var bundleResp = await fetch(baseUrl + '/app/api/bundle_add_language.php', {
+                    method: 'POST',
+                    body: bundleData
+                });
+                var bundleText = await bundleResp.text();
+                var bundleResult = null;
+                try { bundleResult = JSON.parse(bundleText); } catch (e) { }
+
+                if (!bundleResult || !bundleResult.success) {
+                    throw new Error((bundleResult && bundleResult.error) ? bundleResult.error : 'Kieliversion luonti epäonnistui');
+                }
+
+                // 3. Navigate to the new language version form
+                window.location.href = bundleResult.redirect;
+
+            } catch (err) {
+                setLoading(addLanguageBtn, false);
+                setLoading(confirmBtn, false);
+                showError(err.message);
+            }
+        });
+    }
+
+    // "Lähetä tarkistettavaksi": save then go to form step 6 for supervisor selection
+    if (sendReviewBtn) {
+        sendReviewBtn.addEventListener('click', async function (e) {
+            e.preventDefault();
+            setLoading(sendReviewBtn, true);
+            try {
+                var saveResult = await submitFormAsJson('save');
+                if (!saveResult || !saveResult.success) {
+                    throw new Error((saveResult && saveResult.error) ? saveResult.error : 'Tallennus epäonnistui');
+                }
+                // Navigate to the form step 6 to select supervisor and submit
+                window.location.href = baseUrl + '/index.php?page=form&id=' + encodeURIComponent(saveResult.new_id) + '&step=6';
+            } catch (err) {
+                setLoading(sendReviewBtn, false);
+                showError(err.message);
+            }
+        });
+    }
+
+    // "Tallenna": submit form normally (handled by form_language.js / server redirect)
+    // No special JS needed – the default form submit goes to save_translation.php which returns JSON with redirect
+    if (saveBtn && sfForm) {
+        saveBtn.addEventListener('click', async function (e) {
+            e.preventDefault();
+            setLoading(saveBtn, true);
+            try {
+                var saveResult = await submitFormAsJson('save');
+                if (!saveResult || !saveResult.success) {
+                    throw new Error((saveResult && saveResult.error) ? saveResult.error : 'Tallennus epäonnistui');
+                }
+                window.location.href = saveResult.redirect || (baseUrl + '/index.php?page=view&id=' + encodeURIComponent(saveResult.new_id));
+            } catch (err) {
+                setLoading(saveBtn, false);
+                showError(err.message);
+            }
+        });
+    }
+})();
 
 <!-- Close-form confirmation modal (form_language) -->
 <?php

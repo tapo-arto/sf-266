@@ -253,6 +253,9 @@ $image3_transform = $flash['image3_transform'] ?? '';
 // initial step param (optional)
 $initialStep = isset($_GET['step']) ? (int) $_GET['step'] : 1;
 
+// Show "saved" toast when returning after draft save
+$showSavedNotice = isset($_GET['saved']) && $_GET['saved'] === '1';
+
 // Kuvapolku muokkaustilassa (tarkistaa myös kuvapankki-hakemiston)
 $getImageUrl = function ($filename) use ($base) {
     $filename = is_string($filename) ? basename($filename) : '';
@@ -1508,6 +1511,14 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
             <?= htmlspecialchars(sf_term('btn_save_draft', $uiLang), ENT_QUOTES, 'UTF-8') ?>
           </button>
           <button
+            type="button"
+            id="sfAddLanguageVersion"
+            class="sf-btn sf-btn-outline"
+            title="<?= htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?? 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8') ?>"
+          >
+            ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
+          </button>
+          <button
             type="submit"
             name="submission_type"
             value="review"
@@ -1523,7 +1534,24 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
             ?>
           </button>
         <?php else: ?>
-          <!-- Single translation child (not in bundle): only save button -->
+          <!-- Single translation child (not in bundle): save as draft + add language + save translation -->
+          <button
+            type="submit"
+            name="submission_type"
+            value="draft"
+            id="sfSaveDraft"
+            class="sf-btn sf-btn-secondary"
+          >
+            <?= htmlspecialchars(sf_term('btn_save_draft', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+          </button>
+          <button
+            type="button"
+            id="sfAddLanguageVersion"
+            class="sf-btn sf-btn-outline"
+            title="<?= htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?? 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8') ?>"
+          >
+            ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
+          </button>
           <button type="button" class="sf-btn sf-btn-primary" id="sf-save-translation-btn">
             <?= htmlspecialchars(sf_term('btn_save_translation', $uiLang) ?? 'Tallenna kieliversio', ENT_QUOTES, 'UTF-8'); ?>
           </button>
@@ -2001,6 +2029,25 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         
         <div class="sf-modal-body">
+            <?php if ($isInBundle): ?>
+            <!-- Bundle mode: show all language versions being sent -->
+            <div class="sf-bundle-submit-summary" style="margin: 0 0 16px 0; padding: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
+                <p style="margin: 0 0 8px 0; font-weight: 600; color: #0369a1;">
+                    <?= htmlspecialchars(sf_term('bundle_confirm_sending_label', $uiLang) ?? 'Tarkistukseen lähetetään seuraavat kieliversiot:', ENT_QUOTES, 'UTF-8') ?>
+                </p>
+                <ul style="margin: 0; padding: 0 0 0 20px; color: #0c4a6e;">
+                    <?php foreach ($bundleAllMembers as $bm): ?>
+                    <li style="margin-bottom: 4px;">
+                        <strong><?= htmlspecialchars(strtoupper($bm['lang'] ?? '')) ?></strong>
+                        <?php if (!empty($bm['title'])): ?>
+                        — <?= htmlspecialchars($bm['title']) ?>
+                        <?php endif; ?>
+                        <span style="font-size:0.85em; color:#64748b;">(ID #<?= (int)$bm['id'] ?>)</span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <?php endif; ?>
             <p style="margin: 0 0 16px 0; color: #64748b;">
                 <?= htmlspecialchars(sf_term('submit_confirm_modal_intro', $uiLang) ?? 'SafetyFlash lähetetään seuraavalle työmaavastaavalle tarkistettavaksi:', ENT_QUOTES, 'UTF-8') ?>
             </p>
@@ -2380,3 +2427,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 })();
 </script>
+<?php if ($showSavedNotice): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var msg = <?= json_encode(sf_term('draft_saved', $uiLang) ?? 'Luonnos tallennettu.', JSON_UNESCAPED_UNICODE) ?>;
+    if (typeof window.sfToast === 'function') {
+        window.sfToast('success', msg);
+    }
+    // Clean up URL to remove ?saved=1 without reload
+    if (window.history && window.history.replaceState) {
+        var url = window.location.href.replace(/[?&]saved=1/, '').replace(/\?$/, '');
+        window.history.replaceState({}, '', url);
+    }
+});
+</script>
+<?php endif; ?>
