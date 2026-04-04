@@ -1736,7 +1736,8 @@ input[type="time"]:hover {
     }
 
     .sf-step6-footer {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
         gap: 10px;
         margin: 16px auto 100px;
     }
@@ -1744,13 +1745,25 @@ input[type="time"]:hover {
     .sf-step6-footer-right {
         flex: 1;
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 10px;
+        width: 100%;
     }
 
     .sf-step6-footer-right .sf-btn {
-        flex: 1;
-        min-width: 120px;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .sf-step6-footer .sf-prev-btn {
+        order: 10;
+        width: 100%;
+    }
+
+    .sf-bundle-info-bar {
+        width: 100%;
+        justify-content: center;
+        white-space: normal;
     }
 
     .sf-grid-selector {
@@ -7263,6 +7276,7 @@ body.form-page .sf-form-progress__steps::before {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 12px;
     margin: 32px auto;
     max-width: none;
@@ -7295,7 +7309,7 @@ body.form-page .sf-form-progress__steps::before {
     border-radius: 6px;
     font-size: 0.875rem;
     color: #1e40af;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .sf-bundle-info-label {
@@ -7308,6 +7322,7 @@ body.form-page .sf-form-progress__steps::before {
     width: auto;
     padding: 12px 24px;
     min-width: 120px;
+    white-space: normal;
 }
 
 /* ── Type classes: keep dark background only, no static border-top stripe ── */
