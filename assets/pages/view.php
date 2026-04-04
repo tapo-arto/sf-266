@@ -3108,10 +3108,10 @@ function updateDeleteModalContent() {
 <!-- html2canvas tarvitaan kuvan generointiin -->
 <script src="<?= sf_asset_url('assets/js/vendor/html2canvas.min.js', $base) ?>"></script>
 
-<!-- Quill WYSIWYG editor -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css">
-<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<!-- Quill WYSIWYG editor (vendored locally) -->
+<link rel="stylesheet" href="<?= sf_asset_url('assets/css/vendor/quill.snow.css', $base) ?>">
+<script src="<?= sf_asset_url('assets/js/vendor/quill.min.js', $base) ?>"></script>
+<script src="<?= sf_asset_url('assets/js/vendor/purify.min.js', $base) ?>"></script>
 
 <!-- Safetyflash CSS & JS -->
 <link rel="stylesheet" href="<?= sf_asset_url('assets/css/display-ttl.css', $base) ?>">
