@@ -101,4 +101,11 @@ return [
     'it' => 'Seleziona lingua',
     'el' => 'Επιλέξτε γλώσσα',
 ],
+'form_language_label' => [
+    'fi' => 'Kieliversio',
+    'sv' => 'Språkversion',
+    'en' => 'Language version',
+    'it' => 'Versione linguistica',
+    'el' => 'Γλωσσική έκδοση',
+],
 ];

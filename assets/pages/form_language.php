@@ -90,18 +90,16 @@ $langLabel = $supportedLangs[$newLang] ?? strtoupper($newLang);
 
     <div class="sf-translation-banner">
         <div class="sf-translation-banner-title">
-            Kieliversio: <strong><?php echo htmlspecialchars($langLabel); ?></strong>
+            <?php echo htmlspecialchars(sf_term('form_language_label', $uiLang) ?: 'Kieliversio', ENT_QUOTES, 'UTF-8'); ?>: <strong><?php echo htmlspecialchars($langLabel); ?></strong>
         </div>
         <div class="sf-translation-banner-meta">
-            Perustiedote ID #<?php echo (int) $baseFlash['id']; ?> ·
-            Tyyppi: <?php echo htmlspecialchars($baseFlash['type']); ?> ·
-            Työmaa: <?php echo htmlspecialchars($baseFlash['site']); ?> ·
-            Tapahtuma-aika: <?php echo htmlspecialchars($baseFlash['occurred_at']); ?>
+            <?php echo htmlspecialchars(sf_term('source_flash_from_label', $uiLang) ?: 'Tiedotteesta', ENT_QUOTES, 'UTF-8'); ?> ID #<?php echo (int) $baseFlash['id']; ?> ·
+            <?php echo htmlspecialchars(sf_term('step1_short', $uiLang) ?: 'Tyyppi', ENT_QUOTES, 'UTF-8'); ?>: <?php echo htmlspecialchars($baseFlash['type']); ?> ·
+            <?php echo htmlspecialchars(sf_term('site_label', $uiLang) ?: 'Työmaa', ENT_QUOTES, 'UTF-8'); ?>: <?php echo htmlspecialchars($baseFlash['site']); ?> ·
+            <?php echo htmlspecialchars(sf_term('occurred_at', $uiLang) ?: 'Tapahtuma-aika', ENT_QUOTES, 'UTF-8'); ?>: <?php echo htmlspecialchars($baseFlash['occurred_at']); ?>
         </div>
         <div class="sf-translation-banner-info">
-            Tämä näkymä on tarkoitettu käännösten ja kielenhuollon tekemiseen
-            valmiille safetyflashille. Perustiedot (tyyppi, työmaa, tapahtuma-aika, kuvat)
-            on lukittu pohjatiedotteen mukaisiksi, eikä niitä muuteta.
+            <?php echo htmlspecialchars(sf_term('form_lang_info_text', $uiLang) ?: 'Tämä näkymä on tarkoitettu käännösten ja kielenhuollon tekemiseen valmiille safetyflashille. Perustiedot (tyyppi, työmaa, tapahtuma-aika, kuvat) on lukittu pohjatiedotteen mukaisiksi, eikä niitä muuteta.', ENT_QUOTES, 'UTF-8'); ?>
         </div>
     </div>
 
@@ -111,24 +109,24 @@ $langLabel = $supportedLangs[$newLang] ?? strtoupper($newLang);
         <input type="hidden" name="translation_group_id" value="<?php echo (int) $translationGroupId; ?>">
         <input type="hidden" name="preview_image" id="preview_image">
 
-        <!-- Perustietojen “snapshot” (vain luettavaksi) -->
+        <!-- Perustietojen "snapshot" (vain luettavaksi) -->
         <div class="sf-form-section sf-form-language-meta">
-            <h2>Perustiedot (lukittu)</h2>
+            <h2><?php echo htmlspecialchars(sf_term('form_lang_locked_meta_heading', $uiLang) ?: 'Perustiedot (lukittu)', ENT_QUOTES, 'UTF-8'); ?></h2>
             <div class="sf-form-meta-grid">
                 <div>
-                    <label>Tyyppi</label>
+                    <label><?php echo htmlspecialchars(sf_term('step1_short', $uiLang) ?: 'Tyyppi', ENT_QUOTES, 'UTF-8'); ?></label>
                     <div class="sf-meta-value"><?php echo htmlspecialchars($baseFlash['type']); ?></div>
                 </div>
                 <div>
-                    <label>Työmaa</label>
+                    <label><?php echo htmlspecialchars(sf_term('site_label', $uiLang) ?: 'Työmaa', ENT_QUOTES, 'UTF-8'); ?></label>
                     <div class="sf-meta-value"><?php echo htmlspecialchars($baseFlash['site']); ?></div>
                 </div>
                 <div>
-                    <label>Sijainti / tarkenne</label>
+                    <label><?php echo htmlspecialchars(sf_term('site_detail_label', $uiLang) ?: 'Sijainti / tarkenne', ENT_QUOTES, 'UTF-8'); ?></label>
                     <div class="sf-meta-value"><?php echo htmlspecialchars($baseFlash['site_detail']); ?></div>
                 </div>
                 <div>
-                    <label>Tapahtuma-aika</label>
+                    <label><?php echo htmlspecialchars(sf_term('occurred_at', $uiLang) ?: 'Tapahtuma-aika', ENT_QUOTES, 'UTF-8'); ?></label>
                     <div class="sf-meta-value"><?php echo htmlspecialchars($baseFlash['occurred_at']); ?></div>
                 </div>
             </div>
@@ -137,7 +135,7 @@ $langLabel = $supportedLangs[$newLang] ?? strtoupper($newLang);
         <!-- Varsinainen käännöslomake -->
         <div class="sf-form-section sf-form-language-grid">
             <div class="sf-lang-column sf-lang-base">
-                <h3>Pohjakieli (<?php echo htmlspecialchars(strtoupper($baseFlash['lang'] ?? 'FI')); ?>)</h3>
+                <h3><?php echo htmlspecialchars(sf_term('form_lang_base_column_heading', $uiLang) ?: 'Pohjakieli', ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars(strtoupper($baseFlash['lang'] ?? 'FI')); ?>)</h3>
 <div class="sf-field">
     <label>Sisäinen otsikko (pohja)</label>
     <div class="sf-meta-value">
@@ -167,7 +165,7 @@ $langLabel = $supportedLangs[$newLang] ?? strtoupper($newLang);
             </div>
 
             <div class="sf-lang-column sf-lang-target">
-                <h3>Käännös: <?php echo htmlspecialchars($langLabel); ?></h3>
+                <h3><?php echo htmlspecialchars(sf_term('form_lang_target_column_heading', $uiLang) ?: 'Käännös', ENT_QUOTES, 'UTF-8'); ?>: <?php echo htmlspecialchars($langLabel); ?></h3>
 <div class="sf-field">
     <label>Sisäinen otsikko (käännös)</label>
     <input type="text" name="title"
@@ -193,10 +191,10 @@ $langLabel = $supportedLangs[$newLang] ?? strtoupper($newLang);
 
         <div class="sf-form-actions">
             <a href="index.php?page=view&id=<?php echo (int)$baseFlash['id']; ?>" class="sf-btn sf-btn-secondary">
-                Peruuta
+                <?php echo htmlspecialchars(sf_term('btn_cancel', $uiLang) ?: 'Peruuta', ENT_QUOTES, 'UTF-8'); ?>
             </a>
             <button type="submit" class="sf-btn sf-btn-primary">
-                Tallenna kieliversio
+                <?php echo htmlspecialchars(sf_term('btn_save_translation', $uiLang) ?: 'Tallenna kieliversio', ENT_QUOTES, 'UTF-8'); ?>
             </button>
         </div>
     </form>

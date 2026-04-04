@@ -421,7 +421,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
                 <?php if ($sourceFlash): ?>
                     <br>
                     <span style="color: #666; font-size: 13px;">
-                        Tiedotteesta: <strong>"<?= htmlspecialchars($sourceFlash['title'] ?? '') ?>"</strong>
+                        <?= htmlspecialchars(sf_term('source_flash_from_label', $uiLang) ?: 'Tiedotteesta', ENT_QUOTES, 'UTF-8') ?>: <strong>"<?= htmlspecialchars($sourceFlash['title'] ?? '') ?>"</strong>
                         (ID #<?= (int)$sourceFlash['id'] ?>, <?= $typeEmoji ?> <?= htmlspecialchars($typeLabel) ?>, <?= htmlspecialchars($sourceFlash['site'] ?? '') ?>)
                     </span>
                 <?php endif; ?>
@@ -1797,6 +1797,8 @@ window.SF_I18N = <?= json_encode(array_merge($sfI18n, [
     'save_failed' => sf_term('save_failed', $uiLang),
     'saving_changes' => sf_term('saving_changes', $uiLang),
     'changes_saved' => sf_term('changes_saved', $uiLang),
+    'bundle_language_version_error' => sf_term('bundle_language_version_error', $uiLang),
+    'bundle_language_version_saving' => sf_term('bundle_language_version_saving', $uiLang),
 ]), JSON_UNESCAPED_UNICODE) ?>;
 window.SF_BASE_URL = "<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>";
 window.SF_LIBRARY_SELECTIONS = <?= json_encode($libraryImageIds, JSON_UNESCAPED_UNICODE) ?>;
@@ -2314,7 +2316,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show a loading indicator if available
         if (typeof window.sfFormSubmit !== 'function') {
             // Minimal fallback loading indication
-            addBtn.textContent = '⏳ Tallennetaan…';
+            var i18nLoading = window.SF_I18N || {};
+            addBtn.textContent = '⏳ ' + (i18nLoading.saving_draft || 'Tallennetaan…');
         }
 
         try {
@@ -2329,7 +2332,8 @@ document.addEventListener('DOMContentLoaded', function() {
             try { draftResult = JSON.parse(draftText); } catch (parseErr) { console.error('Draft response parse error:', parseErr); }
 
             if (!draftResult || !draftResult.ok || !draftResult.flash_id) {
-                throw new Error((draftResult && draftResult.error) ? draftResult.error : 'Tallennus epäonnistui');
+                var i18nSave = window.SF_I18N || {};
+                throw new Error((draftResult && draftResult.error) ? draftResult.error : (i18nSave.save_failed || 'Tallennus epäonnistui'));
             }
 
             var flashId = draftResult.flash_id;
@@ -2351,10 +2355,15 @@ document.addEventListener('DOMContentLoaded', function() {
             try { bundleResult = JSON.parse(bundleText); } catch (parseErr) { console.error('Bundle response parse error:', parseErr); }
 
             if (!bundleResult || !bundleResult.success) {
-                throw new Error((bundleResult && bundleResult.error) ? bundleResult.error : 'Kieliversion luonti epäonnistui');
+                var i18nBundle = window.SF_I18N || {};
+                throw new Error((bundleResult && bundleResult.error) ? bundleResult.error : (i18nBundle.bundle_language_version_error || 'Kieliversion luonti epäonnistui'));
             }
 
             // 3. Navigate to the new language version's form
+            var i18nNav = window.SF_I18N || {};
+            if (i18nNav.bundle_language_version_saving && typeof window.sfToast === 'function') {
+                window.sfToast('success', i18nNav.bundle_language_version_saving);
+            }
             window.location.href = bundleResult.redirect;
 
         } catch (err) {
