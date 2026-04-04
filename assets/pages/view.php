@@ -979,7 +979,7 @@ $iconBase = $base .'/assets/img/icons/';
                     </button>
                     <button class="sf-activity-tab" data-tab="additionalInfo">
                         <img src="<?= $base ?>/assets/img/icons/list.svg" alt="" class="sf-tab-icon">
-                        <span>Lisätiedot</span>
+                        <span><?= htmlspecialchars(sf_term('additional_info_tab_label', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
                     </button>
                     <button class="sf-activity-tab" data-tab="versions">
                         <img src="<?= $base ?>/assets/img/icons/version-document.svg" alt="" class="sf-tab-icon">
@@ -1370,7 +1370,7 @@ $iconBase = $base .'/assets/img/icons/';
                     <div class="sf-additional-info-container">
 
                         <p class="sf-additional-info-description" style="margin-bottom: 1rem; color: #4b5563; font-size: 0.92rem;">
-                            Tähän voit lisätä tarkentavia tekstejä, jotka eivät mahdu varsinaiseen Safetyflash-kuvaan. Nämä tiedot tulostuvat automaattisesti PDF-raportin liitteeksi.
+                            <?= htmlspecialchars(sf_term('additional_info_description', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                         </p>
 
                         <?php
@@ -1387,7 +1387,7 @@ $iconBase = $base .'/assets/img/icons/';
                                     style="display: inline-flex; align-items: center; gap: 0.5rem;">
                                 <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/injury_icon.svg"
                                      width="18" height="18" alt="" aria-hidden="true">
-                                Merkitse kehonosat
+                                <?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                             </button>
                         </div>
                         <?php endif; ?>
@@ -1398,11 +1398,11 @@ $iconBase = $base .'/assets/img/icons/';
                                 id="sfAdditionalInfoTextarea"
                                 class="sf-form-control"
                                 rows="4"
-                                placeholder="Kirjoita lisätietoja tapahtumasta..."
+                                placeholder="<?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>"
                                 style="width: 100%; resize: vertical; margin-bottom: 0.5rem;"
                             ></textarea>
                             <button type="button" id="sfAddAdditionalInfoBtn" class="sf-btn sf-btn-primary">
-                                Lisää teksti
+                                <?= htmlspecialchars(sf_term('additional_info_add_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                             </button>
                             <span id="sfAdditionalInfoStatus" style="margin-left: 0.75rem; font-size: 0.875rem;" aria-live="polite"></span>
                         </div>
@@ -1413,7 +1413,7 @@ $iconBase = $base .'/assets/img/icons/';
                                 <?php
                                 $aiFirst = trim((string)($aiEntry['first_name'] ?? ''));
                                 $aiLast  = trim((string)($aiEntry['last_name'] ?? ''));
-                                $aiName  = trim($aiFirst . ' ' . $aiLast) ?: 'Tuntematon';
+                                $aiName  = trim($aiFirst . ' ' . $aiLast) ?: sf_term('additional_info_unknown_author', $currentUiLang);
                                 ?>
                                 <div class="sf-additional-info-item" data-ai-id="<?= (int)$aiEntry['id'] ?>" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.875rem; margin-bottom: 0.75rem; background: #f9fafb;">
                                     <div class="sf-ai-meta" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.4rem;">
@@ -4101,8 +4101,14 @@ function closePublishSingleModal() {
     var csrfToken     = window.SF_CSRF_TOKEN || '';
     var additionalApiUrl = '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/app/api/save_additional_info.php';
 
+    var aiMsgs = {
+        saved:         <?= json_encode(sf_term('additional_info_saved', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        error:         <?= json_encode(sf_term('additional_info_save_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        unknownAuthor: <?= json_encode(sf_term('additional_info_unknown_author', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    };
+
     function renderEntry(entry) {
-        var name = ((entry.first_name || '') + ' ' + (entry.last_name || '')).trim() || 'Tuntematon';
+        var name = ((entry.first_name || '') + ' ' + (entry.last_name || '')).trim() || aiMsgs.unknownAuthor;
         var div = document.createElement('div');
         div.className = 'sf-additional-info-item';
         div.dataset.aiId = entry.id;
@@ -4156,20 +4162,20 @@ function closePublishSingleModal() {
                         list.appendChild(renderEntry(data.entry));
                         textarea.value = '';
                         if (status) {
-                            status.textContent = 'Tallennettu';
+                            status.textContent = aiMsgs.saved;
                             status.style.color = '#16a34a';
                             setTimeout(function () { status.textContent = ''; }, 2500);
                         }
                     } else {
                         if (status) {
-                            status.textContent = 'Tallennus epäonnistui';
+                            status.textContent = aiMsgs.error;
                             status.style.color = '#dc2626';
                         }
                     }
                 })
                 .catch(function () {
                     if (status) {
-                        status.textContent = 'Tallennus epäonnistui';
+                        status.textContent = aiMsgs.error;
                         status.style.color = '#dc2626';
                     }
                 })

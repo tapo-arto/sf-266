@@ -64,7 +64,7 @@ try {
     }
     if (mb_strlen($content) > 10000) {
         http_response_code(400);
-        echo json_encode(['ok' => false, 'error' => 'Content too long (max 10 000 characters)'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'error' => 'Content too long (max 10000 characters)'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
