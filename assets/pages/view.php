@@ -704,8 +704,8 @@ $iconBase = $base .'/assets/img/icons/';
             <?php endif; ?>
 
             <?php if (in_array('send_to_review', $actions)): ?>
-                <a href="<?= htmlspecialchars($base) ?>/index.php?page=form&id=<?= (int) $id ?>&step=6" class="footer-btn fb-comms">
-                    <img src="<?= $iconBase ?>communications_icon.svg" alt="" class="footer-icon">
+                <a href="<?= htmlspecialchars($base) ?>/index.php?page=form&id=<?= (int) $id ?>&step=6" class="footer-btn fb-comms" style="text-decoration: none;">
+                    <img src="<?= $iconBase ?>supervisor_icon.svg" alt="" class="footer-icon">
                     <span class="btn-label"><?= htmlspecialchars(sf_term('footer_send_to_review', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
                 </a>
             <?php endif; ?>

@@ -199,14 +199,22 @@ async function doSubmit(form, isDraft, isInlineSave = false) {
         }
     }
 
+    // Check if this is a bundle review for translation child
+    const approverIdsForMsg = form.querySelector('input[name="approver_ids"]');
+    let hasApprovers = false;
+    try { hasApprovers = JSON.parse(approverIdsForMsg?.value || '[]').length > 0; } catch (_) {}
+    const isBundleReviewMsg = isTranslationChild && !isDraft && hasApprovers;
+
     showLoading(
         isDraft
             ? (i18n.saving_draft || 'Saving draft...')
             : isInlineSave
                 ? (i18n.saving_changes || 'Tallennetaan muutoksia...')
-                : isTranslationChild
-                    ? (i18n.saving_translation || 'Tallennetaan kieliversiota...')
-                    : (i18n.sending_for_review || 'Lähetetään tarkistettavaksi...'),
+                : isBundleReviewMsg
+                    ? (i18n.sending_for_review || 'Lähetetään tarkistettavaksi...')
+                    : isTranslationChild
+                        ? (i18n.saving_translation || 'Tallennetaan kieliversiota...')
+                        : (i18n.sending_for_review || 'Lähetetään tarkistettavaksi...'),
         i18n.please_wait || 'Odota hetki...'
     );
 
@@ -231,9 +239,14 @@ async function doSubmit(form, isDraft, isInlineSave = false) {
 
         const formData = new FormData(form);
 
-        // For translation children, use submission_type = 'translation'
+        // For translation children, use submission_type = 'translation' UNLESS approver_ids
+        // are set (bundle review flow), in which case use 'review' so the supervisor is notified.
         if (isTranslationChild) {
-            formData.append('submission_type', 'translation');
+            const approverIdsInput = form.querySelector('input[name="approver_ids"]');
+            let approverIds = [];
+            try { approverIds = JSON.parse(approverIdsInput?.value || '[]'); } catch (_) {}
+            const isBundleReview = !isDraft && approverIds.length > 0;
+            formData.append('submission_type', isBundleReview ? 'review' : (isDraft ? 'draft' : 'translation'));
         } else {
             formData.append('submission_type', isDraft ? 'draft' : 'review');
         }
@@ -340,8 +353,12 @@ async function doSubmit(form, isDraft, isInlineSave = false) {
                     // Draft save: stay in edit mode so user can continue editing or add more languages
                     window.location.href = `${baseUrl}/index.php?page=form&id=${encodeURIComponent(result.flash_id)}&step=6&saved=1`;
                 } else {
-                    // Review/translation save: go to view page to show the result in context
-                    window.location.href = `${baseUrl}/index.php?page=view&id=${encodeURIComponent(result.flash_id)}&notice=translation_saved`;
+                    // Check if approvers were submitted (bundle review) for appropriate notice
+                    const approverIdsInput = form.querySelector('input[name="approver_ids"]');
+                    let approverIds = [];
+                    try { approverIds = JSON.parse(approverIdsInput?.value || '[]'); } catch (_) {}
+                    const notice = approverIds.length > 0 ? 'sent_to_review' : 'translation_saved';
+                    window.location.href = `${baseUrl}/index.php?page=view&id=${encodeURIComponent(result.flash_id)}&notice=${notice}`;
                 }
             } else {
                 window.location.href = `${baseUrl}/index.php?page=list&bg_process=${encodeURIComponent(result.flash_id)}`;

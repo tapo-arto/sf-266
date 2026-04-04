@@ -5,9 +5,8 @@ declare(strict_types=1);
 /**
  * Bundle workflow: create a new language version draft from an already-saved flash.
  *
- * Copies images and text (so the translator sees the source) but clears
- * grid_bitmap and annotations_data so the user can draw new language-specific
- * markings on the images.
+ * Copies images, text, annotations_data and grid_bitmap from the source so the
+ * translator sees the original markings as a starting reference.
  *
  * POST params:
  *   source_id   (int)    – ID of the already-saved source flash
@@ -102,8 +101,8 @@ try {
     }
 
     // Create the new language-version draft.
-    // Images are preserved; grid_bitmap and annotations_data are cleared so
-    // the user can draw new language-specific arrows / text on the photos.
+    // Images, grid_bitmap and annotations_data are preserved from the source so the user
+    // sees the original markings as a reference and can adjust them for the new language.
     $insertStmt = $pdo->prepare('
         INSERT INTO sf_flashes (
             type, title, title_short, summary, description,
@@ -122,7 +121,7 @@ try {
             :image_main, :image_2, :image_3,
             :image1_transform, :image2_transform, :image3_transform,
             :grid_style, :grid_layout,
-            NULL, NULL,
+            :annotations_data, :grid_bitmap,
             :lang, :translation_group_id, :state,
             :created_by, NOW(), NOW()
         )
@@ -148,6 +147,8 @@ try {
         ':image3_transform'     => $source['image3_transform'],
         ':grid_style'           => $source['grid_style'] ?? 'grid-3-main-top',
         ':grid_layout'          => $source['grid_layout'] ?? null,
+        ':annotations_data'     => $source['annotations_data'] ?? null,
+        ':grid_bitmap'          => $source['grid_bitmap'] ?? null,
         ':lang'                 => $targetLang,
         ':translation_group_id' => $groupId,
         ':state'                => 'draft',

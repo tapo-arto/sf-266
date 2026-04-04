@@ -597,6 +597,19 @@ input[type="time"]:hover {
     background: #e5e7eb;
 }
 
+/* Outline variant - explicit specificity to override sf-btn's border: none */
+.sf-btn.sf-btn-outline {
+    background: transparent;
+    border: 1px solid #6b7280;
+    color: #6b7280;
+}
+
+.sf-btn.sf-btn-outline:hover {
+    background: #f3f4f6;
+    border-color: #374151;
+    color: #374151;
+}
+
 /* Disabled nappi */
 .sf-btn-primary:disabled,
 .sf-btn-primary.disabled {
