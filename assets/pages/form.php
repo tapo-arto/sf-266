@@ -80,6 +80,12 @@ if ($editing && !empty($flash['translation_group_id']) && (int)$flash['translati
     }
 }
 
+// Early assignment of $flashLang and $state_val needed for bundle group calculations below.
+// These are refined later (language validation against config) but the raw values are
+// required here so that $bundleAllMembers and $isInBundle are computed correctly.
+$flashLang = $flash['lang'] ?? 'fi';
+$state_val  = $flash['state'] ?? '';
+
 // --- Bundle group info ---
 // Fetch all other members of the same translation group (for bundle workflow)
 $bundleGroupMembers = [];
@@ -1474,18 +1480,19 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
 })();
 </script>
 
+  <?php
+  // Language labels with flag emojis – used in both translation-child and normal-mode footers.
+  $sfLangLabels = ['fi' => '🇫🇮 FI', 'sv' => '🇸🇪 SV', 'en' => '🇬🇧 EN', 'it' => '🇮🇹 IT', 'el' => '🇬🇷 EL'];
+  $bundleMemberLabel = '';
+  if ($isInBundle) {
+      $bundleMemberLabelParts = array_map(
+          function($m) use ($sfLangLabels) { return $sfLangLabels[$m['lang']] ?? strtoupper((string)$m['lang']); },
+          $bundleAllMembers
+      );
+      $bundleMemberLabel = implode(', ', $bundleMemberLabelParts);
+  }
+  ?>
   <?php if ($isTranslationChild): ?>
-    <?php
-    // Language labels with flag emojis
-    $sfLangLabels = ['fi' => '🇫🇮 FI', 'sv' => '🇸🇪 SV', 'en' => '🇬🇧 EN', 'it' => '🇮🇹 IT', 'el' => '🇬🇷 EL'];
-    if ($isInBundle):
-        $bundleMemberLabelParts = array_map(
-            function($m) use ($sfLangLabels) { return $sfLangLabels[$m['lang']] ?? strtoupper((string)$m['lang']); },
-            $bundleAllMembers
-        );
-        $bundleMemberLabel = implode(', ', $bundleMemberLabelParts);
-    endif;
-    ?>
     <!-- Translation child mode footer -->
     <div class="sf-step6-footer">
       <button type="button" class="sf-btn sf-btn-secondary sf-prev-btn">
@@ -1598,6 +1605,47 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
           </button>
         <?php else: ?>
           <!-- Uusi tai draft/request_info - näytä kaikki painikkeet -->
+          <?php if ($isInBundle): ?>
+            <!-- Bundle mode: show bundle membership info and send-all button -->
+            <div class="sf-bundle-info-bar">
+              <span class="sf-bundle-info-label">
+                <?= htmlspecialchars(sf_term('bundle_members_label', $uiLang) ?? 'Nipussa:', ENT_QUOTES, 'UTF-8') ?>
+                <strong><?= htmlspecialchars($bundleMemberLabel) ?></strong>
+              </span>
+            </div>
+            <button
+              type="submit"
+              name="submission_type"
+              value="draft"
+              id="sfSaveDraft"
+              class="sf-btn sf-btn-secondary"
+            >
+              <?= htmlspecialchars(sf_term('btn_save_draft', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
+            <button
+              type="button"
+              id="sfAddLanguageVersion"
+              class="sf-btn sf-btn-outline"
+              title="<?= htmlspecialchars(sf_term('btn_add_language_version_title', $uiLang) ?? 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio', ENT_QUOTES, 'UTF-8') ?>"
+            >
+              ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
+            </button>
+            <button
+              type="submit"
+              name="submission_type"
+              value="review"
+              id="sfSubmitReview"
+              class="sf-btn sf-btn-primary"
+            >
+              <?php
+              $sendAllLabel = sprintf(
+                  sf_term('btn_send_bundle_review', $uiLang) ?? 'Lähetä kaikki (%d) tarkistettavaksi',
+                  $bundleCount
+              );
+              echo htmlspecialchars($sendAllLabel, ENT_QUOTES, 'UTF-8');
+              ?>
+            </button>
+          <?php else: ?>
           <button
             type="submit"
             name="submission_type"
@@ -1624,6 +1672,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
           >
             <?= htmlspecialchars(sf_term('btn_send_review', $uiLang), ENT_QUOTES, 'UTF-8') ?>
           </button>
+          <?php endif; // $isInBundle ?>
         <?php endif; ?>
       </div>
     </div>
