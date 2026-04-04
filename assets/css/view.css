@@ -653,6 +653,124 @@
     border-left: 1px solid #e5e7eb;
 }
 
+.fb-settings {
+    color: #374151;
+}
+
+.fb-settings:hover::before {
+    background: #374151;
+}
+
+.fb-settings:hover {
+    background: #f3f4f6;
+}
+
+/* =========================
+   Asetukset-modaali
+   ========================= */
+.sf-settings-modal-content {
+    max-width: 420px;
+}
+
+.sf-settings-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.sf-settings-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.sf-settings-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #6b7280;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+
+.sf-settings-modal-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.sf-settings-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.sf-settings-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.sf-settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sf-settings-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+}
+
+.sf-settings-select {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    font-size: 0.925rem;
+    color: #111827;
+    background: #ffffff;
+    cursor: pointer;
+    box-sizing: border-box;
+    margin-bottom: 0;
+}
+
+.sf-settings-select:focus {
+    border-color: #fee000;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(254, 224, 0, 0.35);
+}
+
+.sf-settings-save-status {
+    font-size: 0.8rem;
+    min-height: 1.2em;
+    transition: color 0.2s;
+}
+
+.sf-settings-save-ok {
+    color: #16a34a;
+}
+
+.sf-settings-save-error {
+    color: #dc2626;
+}
+
+.sf-settings-bodymap-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
 /* =========================
    Kielivalitsin
    ========================= */

@@ -78,22 +78,20 @@ if ($currentUser && $flash) {
 $uiLang          = $_SESSION['ui_lang'] ?? 'fi';
 $currentUiLang   = $uiLang ?? 'fi';
 
-// Load existing body parts for Ensitiedote (type='red') quick-edit
+// Load existing body parts for quick-edit
 $existing_body_parts = [];
-if (($flash['type'] ?? '') === 'red') {
-    try {
-        $bpStmt = $pdo->prepare("
-            SELECT bp.svg_id
-            FROM incident_body_part ibp
-            JOIN body_parts bp ON bp.id = ibp.body_part_id
-            WHERE ibp.incident_id = :id
-            ORDER BY bp.sort_order
-        ");
-        $bpStmt->execute([':id' => $id]);
-        $existing_body_parts = array_column($bpStmt->fetchAll(PDO::FETCH_ASSOC), 'svg_id');
-    } catch (Throwable $e) {
-        error_log('view.php: Failed to load body parts: ' . $e->getMessage());
-    }
+try {
+    $bpStmt = $pdo->prepare("
+        SELECT bp.svg_id
+        FROM incident_body_part ibp
+        JOIN body_parts bp ON bp.id = ibp.body_part_id
+        WHERE ibp.incident_id = :id
+        ORDER BY bp.sort_order
+    ");
+    $bpStmt->execute([':id' => $id]);
+    $existing_body_parts = array_column($bpStmt->fetchAll(PDO::FETCH_ASSOC), 'svg_id');
+} catch (Throwable $e) {
+    error_log('view.php: Failed to load body parts: ' . $e->getMessage());
 }
 
 // Check if user can manage reviewers (admin, safety team, or original creator)
@@ -593,6 +591,9 @@ $canEdit = in_array('edit', $actions);
 // Determine if current user can add extra images (broader than canEdit - allows owner/admin/safety in all states)
 $canAddExtraImages = $isOwner || $isAdmin || $isSafety;
 
+// Determine if current user can access report settings (Settings modal, body map for all types)
+$canAccessSettings = !$isArchived && ($isAdmin || $isSafety || $isOwner);
+
 $iconBase = $base .'/assets/img/icons/';
 ?>
 <?php $stateCss = preg_replace('/[^a-z0-9_\-]/i', '', (string)($flash['state'] ?? '')); ?>
@@ -726,6 +727,18 @@ $iconBase = $base .'/assets/img/icons/';
                     <img src="<?= $iconBase ?>supervisor_icon.svg" alt="" class="footer-icon">
                     <span class="btn-label"><?= htmlspecialchars(sf_term('footer_send_to_review', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
                 </a>
+            <?php endif; ?>
+
+            <?php if ($canAccessSettings): ?>
+                <button class="footer-btn fb-settings" id="footerSettings" type="button"
+                        data-modal-open="#sfReportSettingsModal"
+                        aria-label="<?= htmlspecialchars(sf_term('footer_settings', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
+                    <svg class="footer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                        <path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/>
+                        <path d="M4 12h2M18 12h2M12 4v2M12 18v2M7 7l1.5 1.5M15.5 15.5L17 17M7 17l1.5-1.5M15.5 8.5L17 7"/>
+                    </svg>
+                    <span class="btn-label"><?= htmlspecialchars(sf_term('footer_settings', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                </button>
             <?php endif; ?>
 
         </div>
@@ -1800,7 +1813,6 @@ $descAllowed = strip_tags($descProcessed, '<strong><span>');
 </div> <!-- .view-container -->
 </div> <!-- .sf-page-container -->
 
-<?php if (($flash['type'] ?? '') === 'red'): ?>
 <!-- Hidden select for body map quick-edit (pre-populated with current body parts) -->
 <select id="sfInjuredPartsHidden" multiple class="sf-form-hidden" style="display:none;" aria-hidden="true">
     <?php foreach ($existing_body_parts as $svgId): ?>
@@ -1809,11 +1821,10 @@ $descAllowed = strip_tags($descProcessed, '<strong><span>');
 </select>
 
 <?php
-// Body map modal — Ensitiedote quick-edit
+// Body map modal — available for all report types
 $uiLang = $currentUiLang;
 include __DIR__ . '/../partials/body_map_modal.php';
 ?>
-<?php endif; ?>
 
 <!-- ===== MODALIT ===== -->
 <div class="sf-modal hidden" id="modalEdit" role="dialog" aria-modal="true" aria-labelledby="modalEditTitle">
@@ -3192,6 +3203,10 @@ function updateDeleteModalContent() {
 <?php require __DIR__ . '/../partials/modal_display_targets.php'; ?>
 <?php endif; ?>
 
+<?php if ($canAccessSettings): ?>
+<?php require __DIR__ . '/../partials/report_settings_modal.php'; ?>
+<?php endif; ?>
+
 
 <?php /* Footer action bar siirretty ylös (näkyy heti sivun latautuessa). */ ?>
 
@@ -4086,7 +4101,6 @@ function closePublishSingleModal() {
 <!-- Image Captions Module -->
 <script src="<?= sf_asset_url('assets/js/modules/image_captions.js', $base) ?>"></script>
 
-<?php if (($flash['type'] ?? '') === 'red'): ?>
 <script src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/js/body-map.js"></script>
 <script>
 (function () {
@@ -4150,6 +4164,99 @@ function closePublishSingleModal() {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
+    }
+})();
+</script>
+<?php if ($canAccessSettings): ?>
+<script>
+(function () {
+    'use strict';
+
+    var flashId    = <?= (int)$flash['id'] ?>;
+    var csrfToken  = window.SF_CSRF_TOKEN || '';
+    var settingsApiUrl = '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/app/api/save_report_settings.php';
+
+    var settingsMsgs = {
+        saved: <?= json_encode(sf_term('settings_original_type_saved', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        error: <?= json_encode(sf_term('settings_original_type_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    };
+
+    function initSettingsModal() {
+        // Open body map from settings modal
+        var bodyMapBtn = document.getElementById('sfSettingsBodyMapBtn');
+        if (bodyMapBtn) {
+            bodyMapBtn.addEventListener('click', function () {
+                // Close settings modal
+                var settingsModal = document.getElementById('sfReportSettingsModal');
+                if (settingsModal) {
+                    settingsModal.classList.add('hidden');
+                }
+                // Open body map modal
+                var bodyMapModal = document.getElementById('sfBodyMapModal');
+                if (bodyMapModal) {
+                    bodyMapModal.classList.remove('hidden');
+                    document.body.classList.add('sf-modal-open');
+                    var focusable = bodyMapModal.querySelector('button, [href], input, select, textarea');
+                    if (focusable) { focusable.focus({ preventScroll: true }); }
+                }
+            });
+        }
+
+        // Auto-save original type on change
+        var originalTypeSelect = document.getElementById('sfOriginalTypeSelect');
+        if (originalTypeSelect) {
+            originalTypeSelect.addEventListener('change', function () {
+                saveOriginalType(this.value);
+            });
+        }
+    }
+
+    function saveOriginalType(value) {
+        var statusEl = document.getElementById('sfOriginalTypeSaveStatus');
+        if (statusEl) { statusEl.textContent = ''; }
+
+        var formData = new FormData();
+        formData.append('flash_id', flashId);
+        formData.append('original_type', value);
+        formData.append('csrf_token', csrfToken);
+
+        fetch(settingsApiUrl, { method: 'POST', body: formData })
+            .then(function (r) {
+                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                return r.json();
+            })
+            .then(function (data) {
+                if (data.ok) {
+                    if (statusEl) {
+                        statusEl.textContent = settingsMsgs.saved;
+                        statusEl.className = 'sf-settings-save-status sf-settings-save-ok';
+                        setTimeout(function () { statusEl.textContent = ''; statusEl.className = 'sf-settings-save-status'; }, 2500);
+                    }
+                } else {
+                    if (statusEl) {
+                        statusEl.textContent = settingsMsgs.error;
+                        statusEl.className = 'sf-settings-save-status sf-settings-save-error';
+                    }
+                    if (typeof showNotification === 'function') {
+                        showNotification(settingsMsgs.error, 'error');
+                    }
+                }
+            })
+            .catch(function () {
+                if (statusEl) {
+                    statusEl.textContent = settingsMsgs.error;
+                    statusEl.className = 'sf-settings-save-status sf-settings-save-error';
+                }
+                if (typeof showNotification === 'function') {
+                    showNotification(settingsMsgs.error, 'error');
+                }
+            });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSettingsModal);
+    } else {
+        initSettingsModal();
     }
 })();
 </script>

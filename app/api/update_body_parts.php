@@ -2,7 +2,7 @@
 /**
  * API Endpoint: Update Injured Body Parts
  *
- * Updates the injured body parts for an Ensitiedote (type='red') flash.
+ * Updates the injured body parts for any flash report type.
  * Requires user authentication and CSRF validation.
  * Only the report owner, admin, or safety team member may update.
  */
@@ -64,13 +64,6 @@ try {
     if (!$flash) {
         http_response_code(404);
         echo json_encode(['ok' => false, 'error' => 'Flash not found'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    // Body parts quick-edit is only available for Ensitiedote (type='red')
-    if ($flash['type'] !== 'red') {
-        http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Body parts can only be edited for Ensitiedote reports'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

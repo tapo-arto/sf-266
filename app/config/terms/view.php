@@ -584,4 +584,46 @@ return [
     'it' => 'Voglio ricevere notifiche via e-mail per i nuovi commenti su questo SafetyFlash',
     'el' => 'Θέλω να λαμβάνω ειδοποιήσεις μέσω email για νέα σχόλια σε αυτό το SafetyFlash'
 ],
+'settings_modal_title' => [
+    'fi' => 'Raportin asetukset',
+    'sv' => 'Rapportinställningar',
+    'en' => 'Report settings',
+    'it' => 'Impostazioni del rapporto',
+    'el' => 'Ρυθμίσεις αναφοράς',
+],
+'settings_original_type_label' => [
+    'fi' => 'Alkuperäinen tyyppi',
+    'sv' => 'Ursprunglig typ',
+    'en' => 'Original type',
+    'it' => 'Tipo originale',
+    'el' => 'Αρχικός τύπος',
+],
+'settings_original_type_none' => [
+    'fi' => '— Ei määritetty —',
+    'sv' => '— Inte angiven —',
+    'en' => '— Not set —',
+    'it' => '— Non impostato —',
+    'el' => '— Δεν έχει οριστεί —',
+],
+'settings_original_type_saved' => [
+    'fi' => 'Tallennettu',
+    'sv' => 'Sparad',
+    'en' => 'Saved',
+    'it' => 'Salvato',
+    'el' => 'Αποθηκεύτηκε',
+],
+'settings_original_type_error' => [
+    'fi' => 'Tallennus epäonnistui',
+    'sv' => 'Fel vid sparning',
+    'en' => 'Save failed',
+    'it' => 'Salvataggio non riuscito',
+    'el' => 'Αποτυχία αποθήκευσης',
+],
+'body_parts_section_title' => [
+    'fi' => 'Kehonosat',
+    'sv' => 'Kroppsdelar',
+    'en' => 'Body parts',
+    'it' => 'Parti del corpo',
+    'el' => 'Μέλη του σώματος',
+],
 ];
