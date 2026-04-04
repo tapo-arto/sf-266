@@ -2,13 +2,14 @@
 /**
  * API Endpoint: Save Additional Info Text
  *
- * Saves a free-text entry to sf_flash_additional_info for the given flash.
+ * Saves or updates a free-text entry in sf_flash_additional_info for the given flash.
  * The table is created automatically (CREATE TABLE IF NOT EXISTS) on first use.
  *
  * POST params:
  *   flash_id    (int, required)
  *   content     (string, required, max 10 000 chars)
  *   csrf_token  (string, required)
+ *   id          (int, optional) — when provided, updates the existing entry instead of inserting
  *
  * Auth: owner, admin (role 1), or safety team (role 3).
  */
@@ -107,24 +108,54 @@ try {
         exit;
     }
 
-    // Insert
-    $ins = $pdo->prepare("
-        INSERT INTO sf_flash_additional_info (flash_id, user_id, content, created_at)
-        VALUES (?, ?, ?, NOW())
-    ");
-    $ins->execute([$flashId, $userId, $content]);
-    $newId = (int)$pdo->lastInsertId();
+    $editId = (int)($_POST['id'] ?? 0);
 
-    // Fetch inserted row with author name
-    $sel = $pdo->prepare("
-        SELECT ai.id, ai.content, ai.created_at,
+    // Shared SELECT for fetching the entry after save/update
+    $fetchSql = "
+        SELECT ai.id, ai.user_id, ai.content, ai.created_at,
                u.first_name, u.last_name
         FROM sf_flash_additional_info ai
         LEFT JOIN sf_users u ON u.id = ai.user_id
         WHERE ai.id = ?
         LIMIT 1
-    ");
-    $sel->execute([$newId]);
+    ";
+
+    if ($editId > 0) {
+        // UPDATE existing entry — verify ownership
+        $ownerStmt = $pdo->prepare("SELECT id, user_id FROM sf_flash_additional_info WHERE id = ? AND flash_id = ? LIMIT 1");
+        $ownerStmt->execute([$editId, $flashId]);
+        $existing = $ownerStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existing) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'error' => 'Entry not found'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $entryOwner = (int)$existing['user_id'];
+        if ($entryOwner !== $userId && !$isAdmin) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Forbidden'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $upd = $pdo->prepare("UPDATE sf_flash_additional_info SET content = ? WHERE id = ?");
+        $upd->execute([$content, $editId]);
+
+        $rowId = $editId;
+
+    } else {
+        // INSERT new entry
+        $ins = $pdo->prepare("
+            INSERT INTO sf_flash_additional_info (flash_id, user_id, content, created_at)
+            VALUES (?, ?, ?, NOW())
+        ");
+        $ins->execute([$flashId, $userId, $content]);
+        $rowId = (int)$pdo->lastInsertId();
+    }
+
+    $sel = $pdo->prepare($fetchSql);
+    $sel->execute([$rowId]);
     $row = $sel->fetch(PDO::FETCH_ASSOC);
 
     echo json_encode(['ok' => true, 'entry' => $row], JSON_UNESCAPED_UNICODE);

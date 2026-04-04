@@ -109,7 +109,7 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
     $aiStmt = $pdo->prepare("
-        SELECT ai.id, ai.content, ai.created_at,
+        SELECT ai.id, ai.user_id, ai.content, ai.created_at,
                u.first_name, u.last_name
         FROM sf_flash_additional_info ai
         LEFT JOIN sf_users u ON u.id = ai.user_id
@@ -1394,34 +1394,38 @@ $iconBase = $base .'/assets/img/icons/';
 
                         <?php if ($canAccessSettings): ?>
                         <div class="sf-additional-info-form" style="margin-bottom: 1.25rem;">
-                            <textarea
-                                id="sfAdditionalInfoTextarea"
-                                class="sf-form-control"
-                                rows="4"
-                                placeholder="<?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>"
-                                style="width: 100%; resize: vertical; margin-bottom: 0.5rem;"
-                            ></textarea>
-                            <button type="button" id="sfAddAdditionalInfoBtn" class="sf-btn sf-btn-primary">
+                            <button type="button" id="sfOpenAddAdditionalInfoBtn" class="sf-btn sf-btn-primary">
                                 <?= htmlspecialchars(sf_term('additional_info_add_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                             </button>
-                            <span id="sfAdditionalInfoStatus" style="margin-left: 0.75rem; font-size: 0.875rem;" aria-live="polite"></span>
                         </div>
                         <?php endif; ?>
 
                         <div class="sf-additional-info-list" id="sfAdditionalInfoList">
                             <?php foreach ($additionalInfoEntries as $aiEntry): ?>
                                 <?php
-                                $aiFirst = trim((string)($aiEntry['first_name'] ?? ''));
-                                $aiLast  = trim((string)($aiEntry['last_name'] ?? ''));
-                                $aiName  = trim($aiFirst . ' ' . $aiLast) ?: sf_term('additional_info_unknown_author', $currentUiLang);
+                                $aiFirst   = trim((string)($aiEntry['first_name'] ?? ''));
+                                $aiLast    = trim((string)($aiEntry['last_name'] ?? ''));
+                                $aiName    = trim($aiFirst . ' ' . $aiLast) ?: sf_term('additional_info_unknown_author', $currentUiLang);
+                                $aiIsOwn   = $canAccessSettings && ((int)($aiEntry['user_id'] ?? 0) === $currentUserId || $isAdmin);
                                 ?>
-                                <div class="sf-additional-info-item" data-ai-id="<?= (int)$aiEntry['id'] ?>" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.875rem; margin-bottom: 0.75rem; background: #f9fafb;">
-                                    <div class="sf-ai-meta" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.4rem;">
-                                        <?= htmlspecialchars($aiName, ENT_QUOTES, 'UTF-8') ?>
-                                        &middot;
-                                        <?= htmlspecialchars($aiEntry['created_at'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                <div class="sf-additional-info-item" data-ai-id="<?= (int)$aiEntry['id'] ?>">
+                                    <div class="sf-ai-meta">
+                                        <span class="sf-ai-author-date">
+                                            <?= htmlspecialchars($aiName, ENT_QUOTES, 'UTF-8') ?>
+                                            &middot;
+                                            <?= htmlspecialchars($aiEntry['created_at'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                        </span>
+                                        <?php if ($aiIsOwn): ?>
+                                        <button type="button"
+                                                class="sf-comment-action-btn btn-edit-additional-info"
+                                                data-ai-id="<?= (int)$aiEntry['id'] ?>"
+                                                data-content="<?= htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8') ?>">
+                                            <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">
+                                            <?= htmlspecialchars(sf_term('comment_edit', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                                        </button>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="sf-ai-content" style="white-space: pre-wrap; word-break: break-word;">
+                                    <div class="sf-ai-content">
                                         <?= nl2br(htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8')) ?>
                                     </div>
                                 </div>
@@ -1729,6 +1733,36 @@ include __DIR__ . '/../partials/body_map_modal.php';
         </form>
     </div>
 </div>
+
+<?php if ($canAccessSettings): ?>
+<div class="sf-modal hidden" id="sfAdditionalInfoModal" role="dialog" aria-modal="true" aria-labelledby="sfAdditionalInfoModalTitle">
+    <div class="sf-modal-content">
+        <h2 id="sfAdditionalInfoModalTitle">
+            <?= htmlspecialchars(sf_term('additional_info_modal_add_title', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        </h2>
+        <form id="sfAdditionalInfoForm">
+            <input type="hidden" id="sfAdditionalInfoEditId" value="">
+            <label for="sfAdditionalInfoTextarea">
+                <?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            </label>
+            <textarea
+                id="sfAdditionalInfoTextarea"
+                rows="6"
+                placeholder="<?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>"
+            ></textarea>
+            <span id="sfAdditionalInfoStatus" style="display:block; font-size: 0.875rem; min-height: 1.2em;" aria-live="polite"></span>
+            <div class="sf-modal-actions">
+                <button type="button" class="sf-btn sf-btn-secondary" data-modal-close="sfAdditionalInfoModal">
+                    <?= htmlspecialchars(sf_term('btn_cancel', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                </button>
+                <button type="submit" class="sf-btn sf-btn-primary" id="sfAdditionalInfoSubmitBtn">
+                    <?= htmlspecialchars(sf_term('btn_save', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="sf-modal hidden" id="modalRequestInfo" role="dialog" aria-modal="true" aria-labelledby="modalRequestInfoTitle">
     <div class="sf-modal-content">
@@ -4097,31 +4131,18 @@ function closePublishSingleModal() {
 (function () {
     'use strict';
 
-    var flashId       = <?= (int)$flash['id'] ?>;
-    var csrfToken     = window.SF_CSRF_TOKEN || '';
+    var flashId          = <?= (int)$flash['id'] ?>;
+    var csrfToken        = window.SF_CSRF_TOKEN || '';
     var additionalApiUrl = '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/app/api/save_additional_info.php';
 
     var aiMsgs = {
         saved:         <?= json_encode(sf_term('additional_info_saved', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         error:         <?= json_encode(sf_term('additional_info_save_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         unknownAuthor: <?= json_encode(sf_term('additional_info_unknown_author', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        titleAdd:      <?= json_encode(sf_term('additional_info_modal_add_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        titleEdit:     <?= json_encode(sf_term('additional_info_modal_edit_title', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        editBtnLabel:  <?= json_encode(sf_term('comment_edit', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
     };
-
-    function renderEntry(entry) {
-        var name = ((entry.first_name || '') + ' ' + (entry.last_name || '')).trim() || aiMsgs.unknownAuthor;
-        var div = document.createElement('div');
-        div.className = 'sf-additional-info-item';
-        div.dataset.aiId = entry.id;
-        div.style.cssText = 'border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.875rem; margin-bottom: 0.75rem; background: #f9fafb;';
-        div.innerHTML =
-            '<div class="sf-ai-meta" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.4rem;">' +
-                escapeHtml(name) + ' &middot; ' + escapeHtml(entry.created_at || '') +
-            '</div>' +
-            '<div class="sf-ai-content" style="white-space: pre-wrap; word-break: break-word;">' +
-                escapeHtml(entry.content || '').replace(/\n/g, '<br>') +
-            '</div>';
-        return div;
-    }
 
     function escapeHtml(str) {
         return String(str)
@@ -4132,57 +4153,145 @@ function closePublishSingleModal() {
             .replace(/'/g, '&#39;');
     }
 
-    function init() {
-        var btn      = document.getElementById('sfAddAdditionalInfoBtn');
+    function openModal(editId, prefillContent) {
+        var modal    = document.getElementById('sfAdditionalInfoModal');
+        var titleEl  = document.getElementById('sfAdditionalInfoModalTitle');
+        var editIdEl = document.getElementById('sfAdditionalInfoEditId');
         var textarea = document.getElementById('sfAdditionalInfoTextarea');
         var status   = document.getElementById('sfAdditionalInfoStatus');
-        var list     = document.getElementById('sfAdditionalInfoList');
+        if (!modal) { return; }
 
-        if (!btn || !textarea || !list) { return; }
+        editIdEl.value  = editId || '';
+        textarea.value  = prefillContent || '';
+        if (titleEl) { titleEl.textContent = editId ? aiMsgs.titleEdit : aiMsgs.titleAdd; }
+        if (status)  { status.textContent = ''; }
 
-        btn.addEventListener('click', function () {
-            var content = textarea.value.trim();
-            if (!content) { return; }
+        modal.classList.remove('hidden');
+        document.body.classList.add('sf-modal-open');
+        textarea.focus({ preventScroll: true });
+    }
 
-            btn.disabled = true;
-            if (status) { status.textContent = ''; }
+    function closeModal() {
+        var modal = document.getElementById('sfAdditionalInfoModal');
+        if (!modal) { return; }
+        modal.classList.add('hidden');
+        document.body.classList.remove('sf-modal-open');
+    }
 
-            var formData = new FormData();
-            formData.append('flash_id', flashId);
-            formData.append('content', content);
-            formData.append('csrf_token', csrfToken);
+    function renderNewEntry(entry) {
+        var name  = ((entry.first_name || '') + ' ' + (entry.last_name || '')).trim() || aiMsgs.unknownAuthor;
+        var div   = document.createElement('div');
+        div.className    = 'sf-additional-info-item';
+        div.dataset.aiId = entry.id;
+        div.innerHTML =
+            '<div class="sf-ai-meta">' +
+                '<span class="sf-ai-author-date">' + escapeHtml(name) + ' &middot; ' + escapeHtml(entry.created_at || '') + '</span>' +
+                '<button type="button" class="sf-comment-action-btn btn-edit-additional-info"' +
+                    ' data-ai-id="' + escapeHtml(String(entry.id)) + '"' +
+                    ' data-content="' + escapeHtml(entry.content || '') + '">' +
+                    '<img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/edit.svg" alt="" class="sf-action-icon">' +
+                    ' ' + escapeHtml(aiMsgs.editBtnLabel) +
+                '</button>' +
+            '</div>' +
+            '<div class="sf-ai-content">' + escapeHtml(entry.content || '').replace(/\n/g, '<br>') + '</div>';
+        return div;
+    }
 
-            fetch(additionalApiUrl, { method: 'POST', body: formData })
-                .then(function (r) {
-                    if (!r.ok) { throw new Error('HTTP ' + r.status); }
-                    return r.json();
-                })
-                .then(function (data) {
-                    if (data.ok && data.entry) {
-                        list.appendChild(renderEntry(data.entry));
-                        textarea.value = '';
-                        if (status) {
-                            status.textContent = aiMsgs.saved;
-                            status.style.color = '#16a34a';
-                            setTimeout(function () { status.textContent = ''; }, 2500);
-                        }
-                    } else {
-                        if (status) {
-                            status.textContent = aiMsgs.error;
-                            status.style.color = '#dc2626';
-                        }
+    function updateEntryInList(id, content) {
+        var item = document.querySelector('.sf-additional-info-item[data-ai-id="' + id + '"]');
+        if (!item) { return; }
+        var contentEl  = item.querySelector('.sf-ai-content');
+        var editBtn    = item.querySelector('.btn-edit-additional-info');
+        if (contentEl) { contentEl.innerHTML = escapeHtml(content).replace(/\n/g, '<br>'); }
+        if (editBtn)   { editBtn.dataset.content = content; }
+    }
+
+    function submitForm() {
+        var editIdEl    = document.getElementById('sfAdditionalInfoEditId');
+        var textarea    = document.getElementById('sfAdditionalInfoTextarea');
+        var status      = document.getElementById('sfAdditionalInfoStatus');
+        var submitBtn   = document.getElementById('sfAdditionalInfoSubmitBtn');
+        var list        = document.getElementById('sfAdditionalInfoList');
+        var content     = textarea ? textarea.value.trim() : '';
+        var editId      = editIdEl ? editIdEl.value.trim() : '';
+
+        if (!content) { return; }
+
+        if (submitBtn) { submitBtn.disabled = true; }
+        if (status)    { status.textContent = ''; }
+
+        var formData = new FormData();
+        formData.append('flash_id',   flashId);
+        formData.append('content',    content);
+        formData.append('csrf_token', csrfToken);
+        if (editId) { formData.append('id', editId); }
+
+        fetch(additionalApiUrl, { method: 'POST', body: formData })
+            .then(function (r) {
+                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                return r.json();
+            })
+            .then(function (data) {
+                if (data.ok && data.entry) {
+                    if (editId) {
+                        updateEntryInList(editId, data.entry.content);
+                    } else if (list) {
+                        list.appendChild(renderNewEntry(data.entry));
                     }
-                })
-                .catch(function () {
+                    closeModal();
+                } else {
                     if (status) {
                         status.textContent = aiMsgs.error;
                         status.style.color = '#dc2626';
                     }
-                })
-                .finally(function () {
-                    btn.disabled = false;
-                });
-        });
+                }
+            })
+            .catch(function () {
+                if (status) {
+                    status.textContent = aiMsgs.error;
+                    status.style.color = '#dc2626';
+                }
+            })
+            .finally(function () {
+                if (submitBtn) { submitBtn.disabled = false; }
+            });
+    }
+
+    function init() {
+        // "Add text" button opens modal
+        var openBtn = document.getElementById('sfOpenAddAdditionalInfoBtn');
+        if (openBtn) {
+            openBtn.addEventListener('click', function () {
+                openModal('', '');
+            });
+        }
+
+        // Form submit inside modal
+        var form = document.getElementById('sfAdditionalInfoForm');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                submitForm();
+            });
+        }
+
+        // Edit buttons on existing entries (delegated)
+        var list = document.getElementById('sfAdditionalInfoList');
+        if (list) {
+            list.addEventListener('click', function (e) {
+                var btn = e.target.closest('.btn-edit-additional-info');
+                if (!btn) { return; }
+                openModal(btn.dataset.aiId, btn.dataset.content);
+            });
+        }
+
+        // Close modal on backdrop click
+        var modal = document.getElementById('sfAdditionalInfoModal');
+        if (modal) {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) { closeModal(); }
+            });
+        }
     }
 
     if (document.readyState === 'loading') {
