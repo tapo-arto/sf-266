@@ -970,6 +970,13 @@ return [
     'it' => 'Questo pacchetto include versioni linguistiche:',
     'el' => 'Αυτό το πακέτο περιλαμβάνει γλωσσικές εκδόσεις:',
 ],
+'bundle_confirm_sending_label' => [
+    'fi' => 'Tarkistukseen lähetetään seuraavat kieliversiot:',
+    'sv' => 'Följande språkversioner skickas för granskning:',
+    'en' => 'The following language versions will be sent for review:',
+    'it' => 'Le seguenti versioni linguistiche verranno inviate per la revisione:',
+    'el' => 'Οι ακόλουθες γλωσσικές εκδόσεις θα σταλούν για έλεγχο:',
+],
 'add_language_modal_title' => [
     'fi' => 'Lisää kieliversio',
     'sv' => 'Lägg till språkversion',

@@ -339,4 +339,11 @@ return [
     'it' => 'Chiudi modulo',
     'el' => 'Κλείσιμο φόρμας',
 ],
+'btn_continue' => [
+    'fi' => 'Jatka →',
+    'sv' => 'Fortsätt →',
+    'en' => 'Continue →',
+    'it' => 'Continua →',
+    'el' => 'Συνέχεια →',
+],
 ];
