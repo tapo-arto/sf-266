@@ -18,6 +18,7 @@ $_settingsTypeMap = [
     'green'  => 'investigation_report',
 ];
 $_settingsCurrentOriginalType = $flash['original_type'] ?? '';
+$_settingsIsPublished = ($flash['state'] ?? '') === 'published';
 ?>
 <div class="sf-modal hidden" id="sfReportSettingsModal" role="dialog" aria-modal="true"
      aria-labelledby="sfReportSettingsModalTitle">
@@ -43,7 +44,8 @@ $_settingsCurrentOriginalType = $flash['original_type'] ?? '';
                 <label for="sfOriginalTypeSelect" class="sf-settings-label">
                     <?= htmlspecialchars(sf_term('settings_original_type_label', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                 </label>
-                <select id="sfOriginalTypeSelect" class="sf-settings-select">
+                <select id="sfOriginalTypeSelect" class="sf-settings-select"
+                    <?= $_settingsIsPublished ? 'disabled' : '' ?>>
                     <option value=""><?= htmlspecialchars(sf_term('settings_original_type_none', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></option>
                     <?php foreach ($_settingsTypeMap as $_typeCode => $_termKey): ?>
                     <option value="<?= htmlspecialchars($_typeCode, ENT_QUOTES, 'UTF-8') ?>"
