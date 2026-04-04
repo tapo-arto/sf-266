@@ -100,12 +100,13 @@ $additionalInfoEntries = [];
 /**
  * Sanitize HTML content from the additional info WYSIWYG editor.
  * Strips all disallowed tags and removes all attributes from allowed tags.
+ * Allowed tags match the SAFE_TAGS list in the client-side JS.
  */
 function sf_sanitize_ai_html(string $html): string {
     $allowed = '<p><br><strong><em><u><ol><ul><li><span>';
     $html = strip_tags($html, $allowed);
-    // Remove all attributes from the remaining allowed tags (prevents onclick, style, etc.)
-    $html = preg_replace('/<(\w+)\s[^>]*>/', '<$1>', $html);
+    // Remove all attributes from allowed tags; preserve self-closing slash (e.g. <br />)
+    $html = preg_replace('/<(\w+)(?:\s[^>]*)?(\/?)>/', '<$1$2>', $html);
     return $html;
 }
 
@@ -4330,12 +4331,14 @@ function closePublishSingleModal() {
         // Get and sanitize the HTML content before sending
         var content = q ? sanitizeHtml(q.root.innerHTML) : '';
         if (content === null) {
+            // DOMPurify library failed to load — block submission
             if (status) {
                 status.textContent = aiMsgs.error;
                 status.style.color = '#dc2626';
             }
             return;
         }
+        // Safety net: if sanitizer stripped everything (shouldn't happen when plainText is set)
         if (!content) { return; }
 
         if (submitBtn) { submitBtn.disabled = true; }

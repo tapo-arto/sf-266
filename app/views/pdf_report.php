@@ -667,9 +667,10 @@ if (!empty($gridBitmap)):
     <?php foreach ($additionalInfoEntries as $aiEntry): ?>
         <?php
         $aiRaw = trim((string)($aiEntry['content'] ?? ''));
-        // Strip disallowed tags and attributes (defense in depth)
+        // Strip disallowed tags and attributes; allowed tags match sf_sanitize_ai_html() in view.php
         $aiContent = strip_tags($aiRaw, '<p><br><strong><em><u><ol><ul><li><span>');
-        $aiContent = preg_replace('/<(\w+)\s[^>]*>/', '<$1>', $aiContent);
+        // Remove all attributes; preserve self-closing slash (e.g. <br />)
+        $aiContent = preg_replace('/<(\w+)(?:\s[^>]*)?(\/?)>/', '<$1$2>', $aiContent);
         ?>
         <div style="margin-bottom: 14px;">
             <div style="margin: 0; line-height: 1.5; color: #333;"><?= $aiContent ?></div>
