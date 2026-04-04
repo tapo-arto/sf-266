@@ -19,6 +19,9 @@ $_settingsTypeMap = [
 ];
 $_settingsCurrentOriginalType = $flash['original_type'] ?? '';
 $_settingsIsPublished = ($flash['state'] ?? '') === 'published';
+$_settingsLockOriginalType = $_settingsIsPublished && $_settingsCurrentOriginalType !== '';
+$_settingsCurrentType = $flash['type'] ?? '';
+$_settingsShowBodyMap = ($_settingsCurrentType !== 'yellow' && $_settingsCurrentOriginalType !== 'yellow');
 ?>
 <div class="sf-modal hidden" id="sfReportSettingsModal" role="dialog" aria-modal="true"
      aria-labelledby="sfReportSettingsModalTitle">
@@ -45,7 +48,7 @@ $_settingsIsPublished = ($flash['state'] ?? '') === 'published';
                     <?= htmlspecialchars(sf_term('settings_original_type_label', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                 </label>
                 <select id="sfOriginalTypeSelect" class="sf-settings-select"
-                    <?= $_settingsIsPublished ? 'disabled' : '' ?>>
+                    <?= $_settingsLockOriginalType ? 'disabled' : '' ?>>
                     <option value=""><?= htmlspecialchars(sf_term('settings_original_type_none', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></option>
                     <?php foreach ($_settingsTypeMap as $_typeCode => $_termKey): ?>
                     <option value="<?= htmlspecialchars($_typeCode, ENT_QUOTES, 'UTF-8') ?>"
@@ -58,6 +61,7 @@ $_settingsIsPublished = ($flash['state'] ?? '') === 'published';
             </div>
 
             <!-- Body map -->
+            <?php if ($_settingsShowBodyMap): ?>
             <div class="sf-settings-field">
                 <p class="sf-settings-label">
                     <?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
@@ -68,6 +72,7 @@ $_settingsIsPublished = ($flash['state'] ?? '') === 'published';
                     <?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                 </button>
             </div>
+            <?php endif; ?>
 
         </div>
 
