@@ -311,4 +311,32 @@ return [
     'it' => 'Aggiungi immagini',
     'el' => 'Προσθήκη εικόνων',
 ],
+'btn_add_language_version' => [
+    'fi' => 'Tallenna ja lisää kieliversio',
+    'sv' => 'Spara och lägg till språkversion',
+    'en' => 'Save and add language version',
+    'it' => 'Salva e aggiungi versione linguistica',
+    'el' => 'Αποθήκευση και προσθήκη γλωσσικής έκδοσης',
+],
+'btn_add_language_version_title' => [
+    'fi' => 'Tallenna ensin luonnoksena, luo sitten uusi kieliversio',
+    'sv' => 'Spara först som utkast, skapa sedan ny språkversion',
+    'en' => 'First save as draft, then create a new language version',
+    'it' => 'Prima salva come bozza, poi crea una nuova versione linguistica',
+    'el' => 'Πρώτα αποθηκεύστε ως πρόχειρο, στη συνέχεια δημιουργήστε νέα γλωσσική έκδοση',
+],
+'btn_send_bundle_review' => [
+    'fi' => 'Lähetä kaikki (%d) tarkistettavaksi',
+    'sv' => 'Skicka alla (%d) för granskning',
+    'en' => 'Send all (%d) for review',
+    'it' => 'Invia tutti (%d) per la revisione',
+    'el' => 'Αποστολή όλων (%d) για έλεγχο',
+],
+'btn_close_form' => [
+    'fi' => 'Sulje lomake',
+    'sv' => 'Stäng formuläret',
+    'en' => 'Close form',
+    'it' => 'Chiudi modulo',
+    'el' => 'Κλείσιμο φόρμας',
+],
 ];

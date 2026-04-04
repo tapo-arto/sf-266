@@ -1443,4 +1443,18 @@ return [
     'it' => 'Notifiche dei commenti disattivate',
     'el' => 'Οι ειδοποιήσεις σχολίων απενεργοποιήθηκαν',
 ],
+'bundle_language_version_error' => [
+    'fi' => 'Kieliversion luonti epäonnistui',
+    'sv' => 'Det gick inte att skapa språkversionen',
+    'en' => 'Failed to create language version',
+    'it' => 'Impossibile creare la versione linguistica',
+    'el' => 'Αποτυχία δημιουργίας γλωσσικής έκδοσης',
+],
+'bundle_language_version_saving' => [
+    'fi' => 'Kieliversio luotu. Siirrytään...',
+    'sv' => 'Språkversion skapad. Navigerar...',
+    'en' => 'Language version created. Navigating...',
+    'it' => 'Versione linguistica creata. Navigazione in corso...',
+    'el' => 'Η γλωσσική έκδοση δημιουργήθηκε. Πλοήγηση...',
+],
 ];

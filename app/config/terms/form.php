@@ -963,4 +963,67 @@ return [
     'el' => 'Κάντε κλικ στην εικόνα προεπισκόπησης για να την ανοίξετε σε μεγαλύτερο μέγεθος. Μπορείτε να τη δείτε πιο αναλυτικά με ζουμ και να αλλάξετε το μέγεθος του κειμένου αν χρειάζεται.'
 
 ],
+'bundle_members_label' => [
+    'fi' => 'Tässä nipussa on mukana kieliversiot:',
+    'sv' => 'Detta paket innehåller språkversioner:',
+    'en' => 'This bundle includes language versions:',
+    'it' => 'Questo pacchetto include versioni linguistiche:',
+    'el' => 'Αυτό το πακέτο περιλαμβάνει γλωσσικές εκδόσεις:',
+],
+'add_language_modal_title' => [
+    'fi' => 'Lisää kieliversio',
+    'sv' => 'Lägg till språkversion',
+    'en' => 'Add language version',
+    'it' => 'Aggiungi versione linguistica',
+    'el' => 'Προσθήκη γλωσσικής έκδοσης',
+],
+'add_language_modal_intro' => [
+    'fi' => 'Nykyinen versio tallennetaan luonnokseksi. Valitse kieli uudelle kieliversiolle:',
+    'sv' => 'Den nuvarande versionen sparas som utkast. Välj språk för den nya språkversionen:',
+    'en' => 'The current version will be saved as a draft. Select the language for the new language version:',
+    'it' => 'La versione corrente verrà salvata come bozza. Seleziona la lingua per la nuova versione linguistica:',
+    'el' => 'Η τρέχουσα έκδοση θα αποθηκευτεί ως πρόχειρο. Επιλέξτε γλώσσα για τη νέα γλωσσική έκδοση:',
+],
+'add_language_all_used' => [
+    'fi' => 'Kaikki tuetut kieliversiot on jo luotu.',
+    'sv' => 'Alla stödda språkversioner har redan skapats.',
+    'en' => 'All supported language versions have already been created.',
+    'it' => 'Tutte le versioni linguistiche supportate sono già state create.',
+    'el' => 'Όλες οι υποστηριζόμενες γλωσσικές εκδόσεις έχουν ήδη δημιουργηθεί.',
+],
+'source_flash_from_label' => [
+    'fi' => 'Tiedotteesta',
+    'sv' => 'Från tiedote',
+    'en' => 'From flash',
+    'it' => 'Dal flash',
+    'el' => 'Από flash',
+],
+'form_lang_locked_meta_heading' => [
+    'fi' => 'Perustiedot (lukittu)',
+    'sv' => 'Grunddata (låst)',
+    'en' => 'Basic information (locked)',
+    'it' => 'Informazioni di base (bloccato)',
+    'el' => 'Βασικές πληροφορίες (κλειδωμένες)',
+],
+'form_lang_base_column_heading' => [
+    'fi' => 'Pohjakieli',
+    'sv' => 'Källspråk',
+    'en' => 'Source language',
+    'it' => 'Lingua di origine',
+    'el' => 'Γλώσσα πηγής',
+],
+'form_lang_target_column_heading' => [
+    'fi' => 'Käännös',
+    'sv' => 'Översättning',
+    'en' => 'Translation',
+    'it' => 'Traduzione',
+    'el' => 'Μετάφραση',
+],
+'form_lang_info_text' => [
+    'fi' => 'Tämä näkymä on tarkoitettu käännösten ja kielenhuollon tekemiseen valmiille safetyflashille. Perustiedot (tyyppi, työmaa, tapahtuma-aika, kuvat) on lukittu pohjatiedotteen mukaisiksi, eikä niitä muuteta.',
+    'sv' => 'Den här vyn är avsedd för att göra översättningar och språklig bearbetning av en färdig SafetyFlash. Grundläggande information (typ, arbetsplats, händelsetid, bilder) är låst enligt källtiedote och ändras inte.',
+    'en' => 'This view is intended for making translations and language editing of a completed SafetyFlash. Basic information (type, worksite, event time, images) is locked according to the source flash and will not be changed.',
+    'it' => 'Questa vista è destinata alla creazione di traduzioni e alla revisione linguistica di un SafetyFlash completato. Le informazioni di base (tipo, cantiere, ora dell\'evento, immagini) sono bloccate in base al flash di origine e non verranno modificate.',
+    'el' => 'Αυτή η προβολή προορίζεται για τη δημιουργία μεταφράσεων και γλωσσική επεξεργασία ενός ολοκληρωμένου SafetyFlash. Οι βασικές πληροφορίες (τύπος, εργοτάξιο, ώρα συμβάντος, εικόνες) είναι κλειδωμένες σύμφωνα με το αρχικό flash και δεν θα αλλάξουν.',
+],
 ];
