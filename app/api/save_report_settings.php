@@ -17,20 +17,16 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/csrf.php';
+define('SF_SKIP_AUTO_CSRF', true);
+require_once __DIR__ . '/../includes/protect.php';
 require_once __DIR__ . '/../../assets/lib/Database.php';
 
 global $config;
 Database::setConfig($config['db'] ?? []);
 
-// Authentication
-$user = sf_current_user();
-if (!$user) {
-    http_response_code(401);
-    echo json_encode(['ok' => false, 'error' => 'Unauthorized'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
+$user   = sf_current_user();
+$userId = (int)$user['id'];
+$roleId = (int)($user['role_id'] ?? 0);
 
 // Method
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -46,8 +42,6 @@ if (!sf_csrf_validate()) {
     exit;
 }
 
-$userId  = (int)$user['id'];
-$roleId  = (int)($user['role_id'] ?? 0);
 $isAdmin  = ($roleId === 1);
 $isSafety = ($roleId === 3);
 
@@ -63,7 +57,7 @@ try {
     $pdo = Database::getInstance();
 
     // Load flash
-    $stmt = $pdo->prepare("SELECT id, created_by, is_archived, state FROM sf_flashes WHERE id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, created_by, is_archived, state, original_type FROM sf_flashes WHERE id = ? LIMIT 1");
     $stmt->execute([$flashId]);
     $flash = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -88,10 +82,12 @@ try {
         exit;
     }
 
-    // Published check — settings are locked once the report is published
-    if (($flash['state'] ?? '') === 'published') {
+    // Published check — original_type is locked only when the report is published AND a value has already been saved
+    $isPublished    = ($flash['state'] ?? '') === 'published';
+    $hasOriginalType = !empty($flash['original_type']);
+    if ($isPublished && $hasOriginalType) {
         http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Cannot change settings of published reports'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'error' => 'Cannot change original_type after report is published'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
