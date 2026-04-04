@@ -591,6 +591,9 @@ $canEdit = in_array('edit', $actions);
 // Determine if current user can add extra images (broader than canEdit - allows owner/admin/safety in all states)
 $canAddExtraImages = $isOwner || $isAdmin || $isSafety;
 
+// Determine if current user can access report settings (Settings modal, body map for all types)
+$canAccessSettings = !$isArchived && ($isAdmin || $isSafety || $isOwner);
+
 $iconBase = $base .'/assets/img/icons/';
 ?>
 <?php $stateCss = preg_replace('/[^a-z0-9_\-]/i', '', (string)($flash['state'] ?? '')); ?>
@@ -726,7 +729,7 @@ $iconBase = $base .'/assets/img/icons/';
                 </a>
             <?php endif; ?>
 
-            <?php if (!$isArchived && ($isAdmin || $isSafety || $isOwner)): ?>
+            <?php if ($canAccessSettings): ?>
                 <button class="footer-btn fb-settings" id="footerSettings" type="button"
                         data-modal-open="#sfReportSettingsModal"
                         aria-label="<?= htmlspecialchars(sf_term('footer_settings', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
@@ -3200,7 +3203,7 @@ function updateDeleteModalContent() {
 <?php require __DIR__ . '/../partials/modal_display_targets.php'; ?>
 <?php endif; ?>
 
-<?php if (!$isArchived && ($isAdmin || $isSafety || $isOwner)): ?>
+<?php if ($canAccessSettings): ?>
 <?php require __DIR__ . '/../partials/report_settings_modal.php'; ?>
 <?php endif; ?>
 
@@ -4164,7 +4167,7 @@ function closePublishSingleModal() {
     }
 })();
 </script>
-<?php if (!$isArchived && ($isAdmin || $isSafety || $isOwner)): ?>
+<?php if ($canAccessSettings): ?>
 <script>
 (function () {
     'use strict';
