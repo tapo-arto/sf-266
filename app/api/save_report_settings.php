@@ -63,7 +63,7 @@ try {
     $pdo = Database::getInstance();
 
     // Load flash
-    $stmt = $pdo->prepare("SELECT id, created_by, is_archived FROM sf_flashes WHERE id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, created_by, is_archived, state FROM sf_flashes WHERE id = ? LIMIT 1");
     $stmt->execute([$flashId]);
     $flash = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -85,6 +85,13 @@ try {
     if (!empty($flash['is_archived'])) {
         http_response_code(403);
         echo json_encode(['ok' => false, 'error' => 'Cannot edit archived reports'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // Published check — settings are locked once the report is published
+    if (($flash['state'] ?? '') === 'published') {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'Cannot change settings of published reports'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
