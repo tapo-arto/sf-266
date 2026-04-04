@@ -29,7 +29,7 @@ function loadBodySvg(string $svgFile): string
         return '';
     }
 
-    // Remove the XML declaration line
+    // Remove the XML declaration and any following whitespace
     $raw = preg_replace('/<\?xml[^?]*\?>\s*/', '', $raw);
 
     // Extract everything between the root <svg> tags
@@ -51,8 +51,9 @@ function loadBodySvg(string $svgFile): string
 
     // Add class="sf-bp" to every <path> element so CSS and JS can target them
     $inner = preg_replace('/<path /', '<path class="sf-bp" ', $inner);
-    // Add class="sf-bp" to <g> elements that are named body parts (id="bp-...")
-    $inner = preg_replace('/<g\b(?=[^>]*\bid="bp-[^"]*")/', '<g class="sf-bp" ', $inner);
+    // Add class="sf-bp" to <g> elements that are named body parts (id="bp-..."),
+    // but only when the element does not already carry a class attribute
+    $inner = preg_replace('/<g\b(?=[^>]*\bid="bp-[^"]*")(?![^>]*\bclass=)/', '<g class="sf-bp" ', $inner);
 
     return $inner;
 }
