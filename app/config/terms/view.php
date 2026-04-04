@@ -682,4 +682,18 @@ return [
     'it' => 'Informazioni aggiuntive sull\'evento',
     'el' => 'Πρόσθετες πληροφορίες για το συμβάν',
 ],
+'additional_info_modal_add_title' => [
+    'fi' => 'Lisää teksti',
+    'sv' => 'Lägg till text',
+    'en' => 'Add text',
+    'it' => 'Aggiungi testo',
+    'el' => 'Προσθήκη κειμένου',
+],
+'additional_info_modal_edit_title' => [
+    'fi' => 'Muokkaa tekstiä',
+    'sv' => 'Redigera text',
+    'en' => 'Edit text',
+    'it' => 'Modifica testo',
+    'el' => 'Επεξεργασία κειμένου',
+],
 ];

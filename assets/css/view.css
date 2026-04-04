@@ -670,6 +670,7 @@
    ========================= */
 .sf-settings-modal-content {
     max-width: 420px;
+    padding: 24px;
 }
 
 .sf-settings-modal-header {
@@ -2297,6 +2298,47 @@ body.sf-modal-open #previewImageModal .sf-download-buttons {
 .sf-tab-content.active {
     display: block;
 }
+
+/* ========================================
+   LISÄTIEDOT TAB
+   ======================================== */
+.sf-additional-info-container {
+    max-width: 800px;
+}
+
+.sf-additional-info-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.875rem;
+    margin-bottom: 0.75rem;
+    background: #f9fafb;
+    text-align: left;
+}
+
+.sf-ai-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+.sf-ai-author-date {
+    flex: 1;
+    min-width: 0;
+}
+
+.sf-ai-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+    text-align: left;
+    color: #111827;
+    line-height: 1.6;
+}
+
 
 /* ========================================
    KOMMENTIT
