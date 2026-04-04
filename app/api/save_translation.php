@@ -121,7 +121,7 @@ try {
     $gridLayout      = $baseFlash['grid_layout'] ?? 'grid-1';
     $gridBitmap      = $baseFlash['grid_bitmap'] ?? '';
 
-    $state     = $baseFlash['state'] ?? 'to_comms';
+    $state     = 'draft';
     $createdBy = $_SESSION['user_id'] ?? null;
 
     // --- SERVER-SIDE PREVIEW GENERATION ---

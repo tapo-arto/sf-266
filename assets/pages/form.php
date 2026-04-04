@@ -110,7 +110,7 @@ if ($editing && $editId > 0) {
 $bundleAllMembers = [];
 if ($editing && $editId > 0) {
     $bundleAllMembers = array_merge(
-        [['id' => $editId, 'lang' => $flashLang, 'state' => $state_val]],
+        [['id' => $editId, 'lang' => $flashLang, 'state' => $state_val, 'title_short' => $flash['title_short'] ?? '']],
         $bundleGroupMembers
     );
 }
@@ -1374,10 +1374,9 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
     ][$uiLang] ?? 'Refreshing…';
 
     // Capture the supervisor section for the preview controls right column.
-    // Show for normal flashes AND for translation children that are part of a bundle
-    // (so the user can select supervisors before sending the whole bundle).
+    // Show for all flashes (including translation children) when in a submittable state.
     ob_start();
-    if ((!$isTranslationChild || $isInBundle) && (!$editing || $state_val === 'draft' || $state_val === 'request_info' || $state_val === '')):
+    if (!$editing || $state_val === 'draft' || $state_val === 'request_info' || $state_val === ''):
   ?>
     <div class="sf-supervisor-section" id="sfSupervisorApprovalSection" style="display: none;">
       <h3 class="sf-supervisor-title"><?= htmlspecialchars(sf_term('select_inspector_title', $uiLang) ?: 'Valitse tarkistaja', ENT_QUOTES, 'UTF-8') ?></h3>
@@ -1534,7 +1533,7 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
             ?>
           </button>
         <?php else: ?>
-          <!-- Single translation child (not in bundle): save as draft + add language + save translation -->
+          <!-- Single translation child (not in bundle): save as draft + add language + save translation + send for review -->
           <button
             type="submit"
             name="submission_type"
@@ -1552,8 +1551,14 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
           >
             ➕ <?= htmlspecialchars(sf_term('btn_add_language_version', $uiLang) ?? 'Lisää kieliversio', ENT_QUOTES, 'UTF-8') ?>
           </button>
-          <button type="button" class="sf-btn sf-btn-primary" id="sf-save-translation-btn">
-            <?= htmlspecialchars(sf_term('btn_save_translation', $uiLang) ?? 'Tallenna kieliversio', ENT_QUOTES, 'UTF-8'); ?>
+          <button
+            type="submit"
+            name="submission_type"
+            value="review"
+            id="sfSubmitReview"
+            class="sf-btn sf-btn-primary"
+          >
+            <?= htmlspecialchars(sf_term('btn_send_review', $uiLang) ?? 'Lähetä tarkistettavaksi', ENT_QUOTES, 'UTF-8') ?>
           </button>
         <?php endif; ?>
       </div>
@@ -2029,8 +2034,8 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         
         <div class="sf-modal-body">
-            <?php if ($isInBundle): ?>
-            <!-- Bundle mode: show all language versions being sent -->
+            <?php if ($isInBundle || $isTranslationChild): ?>
+            <!-- Bundle / translation mode: show all language versions being sent -->
             <div class="sf-bundle-submit-summary" style="margin: 0 0 16px 0; padding: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
                 <p style="margin: 0 0 8px 0; font-weight: 600; color: #0369a1;">
                     <?= htmlspecialchars(sf_term('bundle_confirm_sending_label', $uiLang) ?? 'Tarkistukseen lähetetään seuraavat kieliversiot:', ENT_QUOTES, 'UTF-8') ?>
@@ -2039,8 +2044,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <?php foreach ($bundleAllMembers as $bm): ?>
                     <li style="margin-bottom: 4px;">
                         <strong><?= htmlspecialchars(strtoupper($bm['lang'] ?? '')) ?></strong>
-                        <?php if (!empty($bm['title'])): ?>
-                        — <?= htmlspecialchars($bm['title']) ?>
+                        <?php if (!empty($bm['title_short'])): ?>
+                        — <?= htmlspecialchars($bm['title_short']) ?>
                         <?php endif; ?>
                         <span style="font-size:0.85em; color:#64748b;">(ID #<?= (int)$bm['id'] ?>)</span>
                     </li>
