@@ -1821,13 +1821,18 @@ $descAllowed = strip_tags($descProcessed, '<strong><span>');
             <label for="commentMessage">
                 <?= htmlspecialchars(sf_term('modal_comment_label', $currentUiLang) ?? 'Kommentti', ENT_QUOTES, 'UTF-8') ?>
             </label>
-            <textarea
-              id="commentMessage"
-              name="message"
-              rows="4"
-              maxlength="2000"
-              placeholder="<?= htmlspecialchars(sf_term('modal_comment_placeholder', $currentUiLang) ?? '', ENT_QUOTES, 'UTF-8') ?>"
-            ></textarea>
+            <div style="position:relative;">
+                <textarea
+                  id="commentMessage"
+                  name="message"
+                  rows="4"
+                  maxlength="2000"
+                  placeholder="<?= htmlspecialchars(sf_term('modal_comment_placeholder', $currentUiLang) ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                  autocomplete="off"
+                ></textarea>
+                <div id="mentionDropdown" class="sf-mention-dropdown" style="display:none;" role="listbox" aria-label="User suggestions"></div>
+            </div>
+            <div id="mentionedUsersContainer"></div>
 
 <div id="commentNotifyWrap" style="margin-top:14px;">
     <input type="hidden" name="comment_notifications_enabled" value="0">

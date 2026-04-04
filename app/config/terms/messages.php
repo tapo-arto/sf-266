@@ -1443,6 +1443,22 @@ return [
     'it' => 'Notifiche dei commenti disattivate',
     'el' => 'Οι ειδοποιήσεις σχολίων απενεργοποιήθηκαν',
 ],
+'email_mention_notification_subject' => [
+    'fi' => 'Sinut mainittiin SafetyFlash-kommentissa',
+    'sv' => 'Du nämndes i en SafetyFlash-kommentar',
+    'en' => 'You were mentioned in a SafetyFlash comment',
+    'it' => 'Sei stato menzionato in un commento SafetyFlash',
+    'el' => 'Σας αναφέρθηκε σε σχόλιο SafetyFlash',
+],
+
+'email_mention_body' => [
+    'fi' => '%s mainitsi sinut kommentissa SafetyFlashissa.',
+    'sv' => '%s nämnde dig i en kommentar i SafetyFlash.',
+    'en' => '%s mentioned you in a comment on a SafetyFlash.',
+    'it' => '%s ti ha menzionato in un commento su SafetyFlash.',
+    'el' => 'Ο/Η %s σε ανέφερε σε ένα σχόλιο στο SafetyFlash.',
+],
+
 'bundle_language_version_error' => [
     'fi' => 'Kieliversion luonti epäonnistui',
     'sv' => 'Det gick inte att skapa språkversionen',

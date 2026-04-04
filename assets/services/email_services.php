@@ -1686,3 +1686,176 @@ function sf_mail_comment_notifications(
         sf_app_log('sf_mail_comment_notifications ERROR: ' . $e->getMessage(), LOG_LEVEL_ERROR);
     }
 }
+
+/**
+ * Send @mention notification emails to users tagged in a comment.
+ *
+ * @param PDO      $pdo           Database connection
+ * @param int      $logFlashId    Flash group ID used for the comment log
+ * @param string   $message       The comment text containing @mentions
+ * @param int|null $fromUserId    User ID who wrote the comment (excluded from recipients)
+ * @param int[]    $mentionedIds  User IDs that were explicitly @mentioned
+ */
+function sf_mail_mention_notifications(
+    PDO $pdo,
+    int $logFlashId,
+    string $message,
+    ?int $fromUserId,
+    array $mentionedIds
+): void {
+    if (empty($mentionedIds)) {
+        return;
+    }
+
+    try {
+        $flash = sf_get_flash_details($pdo, $logFlashId);
+        if (!$flash) {
+            sf_app_log("sf_mail_mention_notifications: Flash {$logFlashId} not found");
+            return;
+        }
+
+        $flashTitle = (string)($flash['title'] ?? '');
+        $flashUrl   = sf_build_flash_url($logFlashId);
+
+        $fromName = 'Järjestelmä';
+        if (!empty($fromUserId)) {
+            $stmtFrom = $pdo->prepare("
+                SELECT first_name, last_name
+                FROM sf_users
+                WHERE id = ?
+                LIMIT 1
+            ");
+            $stmtFrom->execute([(int)$fromUserId]);
+            $fromUser = $stmtFrom->fetch(PDO::FETCH_ASSOC);
+            if ($fromUser) {
+                $tmpName = trim(((string)($fromUser['first_name'] ?? '')) . ' ' . ((string)($fromUser['last_name'] ?? '')));
+                if ($tmpName !== '') {
+                    $fromName = $tmpName;
+                }
+            }
+        }
+
+        // Filter out the commenter themselves
+        $recipientIds = array_values(array_unique(array_filter(
+            array_map('intval', $mentionedIds),
+            function (int $id) use ($fromUserId): bool {
+                return $id > 0 && (empty($fromUserId) || $id !== (int)$fromUserId);
+            }
+        )));
+
+        if (empty($recipientIds)) {
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($recipientIds), '?'));
+        $stmtRecipients = $pdo->prepare("
+            SELECT
+                u.id,
+                u.email,
+                u.ui_lang,
+                u.first_name,
+                u.last_name,
+                s.unsubscribe_token
+            FROM sf_users u
+            LEFT JOIN sf_comment_subscriptions s
+                ON s.user_id = u.id
+               AND s.flash_id = ?
+            WHERE u.id IN ($placeholders)
+              AND u.is_active = 1
+              AND u.email IS NOT NULL
+              AND u.email <> ''
+        ");
+        $stmtRecipients->execute(array_merge([$logFlashId], $recipientIds));
+        $recipients = $stmtRecipients->fetchAll(PDO::FETCH_ASSOC);
+
+        $safeMessage = trim((string)$message);
+        $safeMessage = preg_replace("/\r\n|\r|\n/", "\n", $safeMessage);
+
+        foreach ($recipients as $recipient) {
+            $recipientId        = (int)$recipient['id'];
+            $recipientEmail     = (string)$recipient['email'];
+            $recipientLang      = (string)($recipient['ui_lang'] ?? 'fi');
+            $recipientFirstName = trim((string)($recipient['first_name'] ?? ''));
+
+            if (!sf_should_send_email($pdo, $recipientEmail)) {
+                continue;
+            }
+
+            // Ensure subscription record exists so unsubscribe_token is available
+            if (empty($recipient['unsubscribe_token'])) {
+                sf_set_comment_subscription($pdo, $logFlashId, $recipientId, true);
+
+                $stmtToken = $pdo->prepare("
+                    SELECT unsubscribe_token
+                    FROM sf_comment_subscriptions
+                    WHERE flash_id = ? AND user_id = ?
+                    LIMIT 1
+                ");
+                $stmtToken->execute([$logFlashId, $recipientId]);
+                $tokenRow = $stmtToken->fetch(PDO::FETCH_ASSOC);
+                if ($tokenRow && !empty($tokenRow['unsubscribe_token'])) {
+                    $recipient['unsubscribe_token'] = $tokenRow['unsubscribe_token'];
+                }
+            }
+
+            $subject = sf_email_term('email_mention_notification_subject', $recipientLang);
+            if ($subject === 'email_mention_notification_subject' || $subject === '') {
+                $subject = 'Sinut mainittiin SafetyFlash-kommentissa';
+            }
+            $subject .= ': ' . $flashTitle;
+
+            $greeting = sf_email_term('email_greeting', $recipientLang);
+            if ($greeting === 'email_greeting' || $greeting === '') {
+                $greeting = 'Hei';
+            }
+
+            $openFlashLabel = sf_email_term('email_open_flash_label', $recipientLang);
+            if ($openFlashLabel === 'email_open_flash_label' || $openFlashLabel === '') {
+                $openFlashLabel = 'Avaa tiedote';
+            }
+
+            $intro = sf_email_term('email_mention_body', $recipientLang);
+            if ($intro === 'email_mention_body' || $intro === '') {
+                $intro = '%s mainitsi sinut kommentissa SafetyFlashissa.';
+            }
+
+            $bodyParts = [];
+
+            if ($recipientFirstName !== '') {
+                $bodyParts[] = $greeting . ' ' . $recipientFirstName . ',';
+            } else {
+                $bodyParts[] = $greeting . ',';
+            }
+
+            $bodyParts[] = sprintf($intro, $fromName);
+            $bodyParts[] = $openFlashLabel . ":\n" . $flashUrl;
+
+            $bodyText = implode("\n\n", $bodyParts);
+
+            $unsubscribeToken = (string)($recipient['unsubscribe_token'] ?? '');
+            $unsubscribeUrl   = '';
+            if ($unsubscribeToken !== '') {
+                $unsubscribeUrl = rtrim((string)($GLOBALS['config']['base_url'] ?? ''), '/')
+                    . '/app/actions/unsubscribe_comment_notifications.php?token='
+                    . urlencode($unsubscribeToken);
+            }
+
+            $emailData = [
+                'type'           => $flash['type'] ?? 'yellow',
+                'subject'        => $subject,
+                'body_text'      => $bodyText,
+                'flash_title'    => $flashTitle,
+                'flash_worksite' => $flash['worksite'] ?? '',
+                'flash_url'      => $flashUrl,
+                'comment_text'   => $safeMessage,
+                'reply_target_name' => '',
+                'unsubscribe_url'   => $unsubscribeUrl,
+            ];
+
+            $email = sf_build_email_html($emailData, $recipientLang);
+            sf_send_email($subject, $email['html'], $email['text'], [$recipientEmail], [], $logFlashId);
+        }
+    } catch (Throwable $e) {
+        sf_app_log('sf_mail_mention_notifications ERROR: ' . $e->getMessage(), LOG_LEVEL_ERROR);
+    }
+}
