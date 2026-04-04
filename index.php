@@ -105,6 +105,7 @@ $base = rtrim($config['base_url'], '/');
         <link rel="stylesheet" href="<?= sf_asset_url('assets/css/render.css', $base) ?>">
         <link rel="stylesheet" href="<?= sf_asset_url('assets/css/copy-to-clipboard.css', $base) ?>">
         <link rel="stylesheet" href="<?= sf_asset_url('assets/css/extra_images.css', $base) ?>">
+        <link rel="stylesheet" href="<?= sf_asset_url('assets/css/vendor/quill.snow.css', $base) ?>">
     <?php elseif ($page === 'settings'): ?>
         <link rel="stylesheet" href="<?= sf_asset_url('assets/css/settings.css', $base) ?>">
         <link rel="stylesheet" href="<?= sf_asset_url('assets/css/role-categories-select.css', $base) ?>">

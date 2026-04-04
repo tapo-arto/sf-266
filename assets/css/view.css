@@ -4263,16 +4263,11 @@ body.sf-modal-open #previewImageModal .sf-download-buttons {
 /* -------------------------------------------------------
  * Additional Info modal – Quill WYSIWYG editor height fix
  *
- * Quill v2 sets height:100% on .ql-container and .ql-editor,
- * which collapses to ~0 when the parent only has min-height.
- * Override with min-height + height:auto so the editor area
- * is always tall enough to click on and type in.
+ * Quill sets height:100% on .ql-editor, which collapses to ~0
+ * when the parent has no explicit height. Override with
+ * min-height + height:auto so the editor area is always tall
+ * enough to click on and type in.
  * ------------------------------------------------------- */
-#sfAdditionalInfoEditor .ql-container {
-    min-height: 120px;
-    height: auto;
-}
-
 #sfAdditionalInfoEditor .ql-editor {
     min-height: 120px;
     height: auto;
