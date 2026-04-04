@@ -259,6 +259,25 @@ $image3_transform = $flash['image3_transform'] ?? '';
 // initial step param (optional)
 $initialStep = isset($_GET['step']) ? (int) $_GET['step'] : 1;
 
+// Load existing body-part selections when editing a red-type incident
+$existing_body_parts = [];
+if ($editing && $editId > 0 && ($flash['type'] ?? '') === 'red') {
+    try {
+        $existing_body_parts = Database::fetchAll(
+            "SELECT bp.svg_id
+             FROM incident_body_part ibp
+             JOIN body_parts bp ON bp.id = ibp.body_part_id
+             WHERE ibp.incident_id = :id
+             ORDER BY bp.sort_order",
+            ['id' => $editId]
+        );
+        $existing_body_parts = array_column($existing_body_parts, 'svg_id');
+    } catch (Throwable $e) {
+        error_log('form.php load body parts error: ' . $e->getMessage());
+        $existing_body_parts = [];
+    }
+}
+
 // Show "saved" toast when returning after draft save
 $showSavedNotice = isset($_GET['saved']) && $_GET['saved'] === '1';
 
@@ -956,6 +975,27 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
         placeholder="<?= htmlspecialchars(sf_term('description_placeholder', $uiLang), ENT_QUOTES, 'UTF-8') ?>"
       ><?= htmlspecialchars($description, ENT_QUOTES, 'UTF-8') ?></textarea>
       <p class="sf-char-count"><span id="sf-description-count">0</span>/950</p>
+    </div>
+
+    <!-- Loukkaantuneet ruumiinosat — näytetään vain Ensitiedotteessa (type=red) -->
+    <div id="sf-injury-section" class="hidden">
+      <div class="sf-injury-btn-row">
+        <button type="button" id="sfBodyMapOpenBtn" class="sf-btn-body-map" data-modal-open="#sfBodyMapModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="5" r="2.5"/>
+            <path d="M7 8.5a2.5 2.5 0 0 0-2.5 2.5v3A3.5 3.5 0 0 0 8 17.4V22h2v-4h4v4h2v-4.6a3.5 3.5 0 0 0 3.5-3.5v-3A2.5 2.5 0 0 0 17 8.5H7z"/>
+          </svg>
+          Merkitse loukkaantuneet ruumiinosat
+        </button>
+      </div>
+      <!-- Valitut ruumiinosat näytetään tageina -->
+      <div id="sfInjuryTags" class="sf-injury-tags"></div>
+      <!-- Piilotettu select — lähetetään lomakkeen mukana -->
+      <select id="sfInjuredPartsHidden" name="injured_parts[]" multiple class="sf-form-hidden"><?php
+        foreach ($existing_body_parts as $svgId): ?><option value="<?= htmlspecialchars($svgId, ENT_QUOTES, 'UTF-8') ?>" selected><?= htmlspecialchars($svgId, ENT_QUOTES, 'UTF-8') ?></option><?php
+        endforeach;
+      ?></select>
     </div>
 
     <div id="sf-investigation-extra" class="sf-step3-investigation hidden">
@@ -2172,6 +2212,13 @@ document.addEventListener('DOMContentLoaded', function() {
 $currentUiLang = $uiLang;
 include __DIR__ . '/../partials/image_library_modal.php';
 ?>
+
+<?php
+// Kehokarttamodaali (Ensitiedote-loukkaantumiset)
+include __DIR__ . '/../partials/body_map_modal.php';
+?>
+
+<script src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/js/body-map.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

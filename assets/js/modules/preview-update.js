@@ -61,6 +61,7 @@ export function updatePreviewLabels() {
 
 export function handleConditionalFields() {
     const isInvestigation = state.selectedType === 'green';
+    const isEnsitiedote   = state.selectedType === 'red';
     const form = document.getElementById('sf-form');
     const isTranslationChild = form?.querySelector('input[name="is_translation_child"]')?.value === '1';
 
@@ -141,6 +142,9 @@ export function handleConditionalFields() {
     }
 
     toggle('sf-investigation-extra', isInvestigation);
+
+    // Loukkaantuneet ruumiinosat — vain Ensitiedotteessa (type=red)
+    toggle('sf-injury-section', isEnsitiedote);
 
     const standaloneChecked = standaloneCheckbox?.checked || false;
     toggle(
