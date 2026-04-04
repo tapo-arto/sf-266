@@ -94,6 +94,34 @@ try {
     error_log('view.php: Failed to load body parts: ' . $e->getMessage());
 }
 
+// Load additional info entries for this flash
+$additionalInfoEntries = [];
+try {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS sf_flash_additional_info (
+            id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            flash_id   INT UNSIGNED NOT NULL,
+            user_id    INT UNSIGNED NOT NULL,
+            content    TEXT         NOT NULL,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_flash_id (flash_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $aiStmt = $pdo->prepare("
+        SELECT ai.id, ai.content, ai.created_at,
+               u.first_name, u.last_name
+        FROM sf_flash_additional_info ai
+        LEFT JOIN sf_users u ON u.id = ai.user_id
+        WHERE ai.flash_id = ?
+        ORDER BY ai.created_at ASC
+    ");
+    $aiStmt->execute([$id]);
+    $additionalInfoEntries = $aiStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    error_log('view.php: Failed to load additional info: ' . $e->getMessage());
+}
+
 // Check if user can manage reviewers (admin, safety team, or original creator)
 $canManageReviewers = false;
 if ($currentUser) {
@@ -949,9 +977,9 @@ $iconBase = $base .'/assets/img/icons/';
                         <img src="<?= $base ?>/assets/img/icons/timeline.svg" alt="" class="sf-tab-icon">
                         <span><?= htmlspecialchars(sf_term('activity_tab_events', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
                     </button>
-                    <button class="sf-activity-tab" data-tab="all">
+                    <button class="sf-activity-tab" data-tab="additionalInfo">
                         <img src="<?= $base ?>/assets/img/icons/list.svg" alt="" class="sf-tab-icon">
-                        <span><?= htmlspecialchars(sf_term('activity_tab_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                        <span><?= htmlspecialchars(sf_term('additional_info_tab_label', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></span>
                     </button>
                     <button class="sf-activity-tab" data-tab="versions">
                         <img src="<?= $base ?>/assets/img/icons/version-document.svg" alt="" class="sf-tab-icon">
@@ -1337,277 +1365,71 @@ $iconBase = $base .'/assets/img/icons/';
                     </div>
                 </div>
 
-                <!-- KAIKKI TAB -->
-                <div class="sf-tab-content" id="tabAll">
-                    <div class="sf-all-activity">
-                        <?php if (empty($logs)): ?>
-                            <div class="sf-empty-state">
-                                <img src="<?= $base ?>/assets/img/icons/no-activity.svg" alt="" class="sf-empty-icon">
-                                <p><?= htmlspecialchars(sf_term('activity_empty', $currentUiLang), ENT_QUOTES, 'UTF-8') ?></p>
-                            </div>
-                        <?php else: ?>
-                            <ul class="sf-activity-list">
-                                <?php foreach ($logs as $logRow):
-                            $first = trim((string)($logRow['first_name'] ?? ''));
-                            $last  = trim((string)($logRow['last_name'] ?? ''));
-                            $fullName = trim($first . ' ' . $last);
-                            $avatarTxt = sf_avatar_initials($fullName);
+                <!-- LISÄTIEDOT TAB -->
+                <div class="sf-tab-content" id="tabAdditionalInfo">
+                    <div class="sf-additional-info-container">
 
-                            $eventKey   = $logRow['event_type'] ?? 'UNKNOWN_EVENT';
-                            $eventLabel = sf_term($eventKey, $currentUiLang);
+                        <p class="sf-additional-info-description" style="margin-bottom: 1rem; color: #4b5563; font-size: 0.92rem;">
+                            <?= htmlspecialchars(sf_term('additional_info_description', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                        </p>
 
-                            $descRaw = $logRow['description'] ?? '';
-
-// Käännä lokikuvaus - PARANNETTU VERSIO
-$descToShow = '';
-
-// Käsittele monirivinen kuvaus
-$lines = explode("\n", $descRaw);
-
-foreach ($lines as $line) {
-    $line = trim($line);
-    if ($line === '') {
-        continue;
-    }
-    
-    $translatedLine = $line;
-    
-    // 1. OCCURRED_AT -muoto: occurred_at: 2026-01-16 16:33:00 → 2026-01-16T16:33
-    if (preg_match('/^occurred_at:\s*(.+?)\s*→\s*(.+)$/u', $line, $matches)) {
-        $beforeLabel = sf_term('occurred_at', $currentUiLang);
-        $before = trim($matches[1]);
-        $after = trim($matches[2]);
-        
-        // Poista T-kirjain päivämäärästä jos on
-        $after = str_replace('T', ' ', $after);
-        
-        $translatedLine = '<strong>' . $beforeLabel . ':</strong> ' . $before . ' → ' . $after;
-    }
-    // 2. STATUS PIPE -muoto: log_status_set|status:published
-    elseif (preg_match('/^(log_\w+)\|status:(\w+)$/u', $line, $matches)) {
-        $logKey = $matches[1];
-        $statusKey = $matches[2];
-        
-        $logTranslated = sf_term($logKey, $currentUiLang);
-        $statusTranslated = sf_status_label($statusKey, $currentUiLang);
-        
-        $translatedLine = '<strong>' . $logTranslated . ':</strong> ' . $statusTranslated;
-    }
-    // 3. DISTRIBUTION SENT -muoto: log_distribution_sent|countries:fi|details:Suomi: 1 vastaanottajaa
-    elseif (preg_match('/^log_distribution_sent\|countries:([^|]+)\|details:(.+)$/u', $line, $matches)) {
-        $logTranslated = sf_term('log_distribution_sent', $currentUiLang);
-        $details = trim($matches[2]);
-        
-        $translatedLine = '<strong>' . $logTranslated . ':</strong> ' . $details;
-    }
-    // 4. MULTI-PARAM PIPE -muoto: log_something|param1:value1|param2:value2
-    elseif (preg_match('/^(log_\w+)\|(.+)$/u', $line, $matches)) {
-        $logKey = $matches[1];
-        $paramsStr = $matches[2];
-        
-        $logTranslated = sf_term($logKey, $currentUiLang);
-        
-        // Parse parameters
-        $params = [];
-        $paramParts = explode('|', $paramsStr);
-        
-        foreach ($paramParts as $part) {
-            if (strpos($part, ':') !== false) {
-                [$key, $val] = array_map('trim', explode(':', $part, 2));
-                $params[$key] = $val;
-            }
-        }
-        
-        // Jos on details, näytä vain se
-        if (isset($params['details'])) {
-            $translatedLine = '<strong>' . $logTranslated . ':</strong> ' . $params['details'];
-        } else {
-            $translatedLine = '<strong>' . $logTranslated . '</strong>';
-        }
-    }
-    // 5. LABEL -muoto: log_comment_label: kommenttiteksti
-    elseif (preg_match('/^(log_\w+_label):\s*(.+)$/u', $line, $matches)) {
-        $labelKey = $matches[1];
-        $content = trim($matches[2]);
-        
-        $labelTranslated = sf_term($labelKey, $currentUiLang);
-        
-        $translatedLine = '<strong>' . $labelTranslated . ':</strong> ' . $content;
-    }
-    // 6. FIELD CHANGE -muoto: title_short: "old" → "new" (with quotes)
-    elseif (preg_match('/^([a-z_]+):\s*"([^"]+)"\s*→\s*"([^"]+)"$/u', $line, $matches)) {
-        $fieldKey = $matches[1];
-        $oldValue = trim($matches[2]);
-        $newValue = trim($matches[3]);
-        
-        $fieldTranslated = sf_term($fieldKey, $currentUiLang);
-        
-        $translatedLine = '<strong>' . $fieldTranslated . ':</strong> ' . $oldValue . ' → ' . $newValue;
-    }
-    // 6b. TYPE CHANGE - special handling: type: red → yellow
-    elseif (preg_match('/^type:\s*(\w+)\s*→\s*(\w+)$/u', $line, $matches)) {
-        $oldType = trim($matches[1]);
-        $newType = trim($matches[2]);
-        
-        $oldTranslated = sf_translate_flash_type($oldType, $currentUiLang);
-        $newTranslated = sf_translate_flash_type($newType, $currentUiLang);
-        
-        $fieldTranslated = sf_term('type', $currentUiLang);
-        
-        $translatedLine = '<strong>' . $fieldTranslated . ':</strong> ' . $oldTranslated . ' → ' . $newTranslated;
-    }
-    // 7. FIELD CHANGE without quotes: title_short: old → new
-    elseif (preg_match('/^([a-z_]+):\s*([^→]+)\s*→\s*(.+)$/u', $line, $matches)) {
-        $fieldKey = $matches[1];
-        $oldValue = trim($matches[2]);
-        $newValue = trim($matches[3]);
-        
-        // If values look like status keys, translate them
-        if (preg_match('/^[a-z_]+$/', $oldValue)) {
-            $oldTranslated = sf_status_label($oldValue, $currentUiLang);
-            if ($oldTranslated && $oldTranslated !== $oldValue) {
-                $oldValue = $oldTranslated;
-            }
-        }
-        
-        if (preg_match('/^[a-z_]+$/', $newValue)) {
-            $newTranslated = sf_status_label($newValue, $currentUiLang);
-            if ($newTranslated && $newTranslated !== $newValue) {
-                $newValue = $newTranslated;
-            }
-        }
-        
-        $fieldTranslated = sf_term($fieldKey, $currentUiLang);
-        
-        $translatedLine = '<strong>' . $fieldTranslated . ':</strong> ' . $oldValue . ' → ' . $newValue;
-    }
-    // 8. SIMPLE KEY:VALUE -muoto: log_something: value
-    elseif (preg_match('/^(log_\w+|[a-z_]+):\s*(.+)$/u', $line, $matches)) {
-        $key = $matches[1];
-        $value = trim($matches[2]);
-        
-        $keyTranslated = sf_term($key, $currentUiLang);
-        
-        // Jos avain on tuntematon, älä käännä
-        if ($keyTranslated === $key && strpos($key, 'log_') !== 0) {
-            $translatedLine = $line; // Pidä alkuperäinen
-        } else {
-            $translatedLine = '<strong>' . $keyTranslated . ':</strong> ' . $value;
-        }
-    }
-    // 9. Yritä kääntää koko rivi
-    else {
-        $translated = sf_term($line, $currentUiLang);
-        if ($translated !== $line) {
-            $translatedLine = $translated;
-        }
-    }
-    
-    if ($descToShow !== '') {
-        $descToShow .= "\n";
-    }
-    $descToShow .= $translatedLine;
-}
-
-// Process status replacements (if function exists)
-$descProcessed = function_exists('sf_log_status_replace')
-    ? sf_log_status_replace($descToShow, $currentUiLang)
-    : $descToShow;
-
-// Sanitize: allow only <strong> and <span> tags
-$descAllowed = strip_tags($descProcessed, '<strong><span>');
-
-                            // Korostetaan eri viestityypit (kommentti, viesti viestinnälle, palautus)
-                            $messageLabels = [
-                                'comment' => [
-                                    'fi' => 'Kommentti:',
-                                    'sv' => 'Kommentar:',
-                                    'en' => 'Comment:',
-                                    'it' => 'Commento:',
-                                    'el' => 'Σχόλιο:',
-                                ],
-                                'comms' => [
-                                    'fi' => 'Viesti viestinnälle:',
-                                    'sv' => 'Meddelande till kommunikation:',
-                                    'en' => 'Message to communications:',
-                                    'it' => 'Messaggio alla comunicazione:',
-                                    'el' => 'Μήνυμα προς επικοινωνία:',
-                                ],
-                                'return' => [
-                                    'fi' => 'Palautteen syy:',
-                                    'sv' => 'Anledning till återkoppling:',
-                                    'en' => 'Reason for return:',
-                                    'it' => 'Motivo del reso:',
-                                    'el' => 'Λόγος επιστροφής:',
-                                ],
-                            ];
-
-                            $descHighlighted = $descAllowed;
-
-                            // Käy läpi kaikki viestityypit ja korvaa ne tyylitellyillä laatikoilla
-                            foreach ($messageLabels as $msgType => $labels) {
-                                $label = $labels[$currentUiLang] ?? $labels['en'];
-                                $cssClass = 'sf-log-' . $msgType; // sf-log-comment, sf-log-comms, sf-log-return
-
-                                $pattern = '/(^|\R)\s*' . preg_quote($label, '/') . '\s*(.+)$/u';
-                                $descHighlighted = preg_replace(
-                                    $pattern,
-                                    '$1<div class="sf-log-message-box ' . $cssClass . '"><span class="sf-log-message-label">' . htmlspecialchars($label) . '</span> $2</div>',
-                                    $descHighlighted
-                                );
-                            }
-                            $plainDescLen = mb_strlen(strip_tags($descAllowed));
-                            $needsMore    = $plainDescLen > 300;
+                        <?php
+                        // Show body map button only for red flashes (or investigations from a red original)
+                        $showBodyMapInTab = (
+                            ($flash['type'] === 'red') ||
+                            ($flash['original_type'] ?? '') === 'red'
+                        );
                         ?>
-                            <li class="sf-log-item" id="log-<?= (int)$logRow['id'] ?>">
-                                <?php if ($isAdmin): ?>
-                                    <button type="button" 
-                                            class="sf-log-delete-btn" 
-                                            data-log-id="<?= (int)$logRow['id'] ?>"
-                                            title="<?= htmlspecialchars(sf_term('log_delete', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
-                                        <img src="<?= $base ?>/assets/img/icons/delete_icon.svg" 
-                                             alt="<?= htmlspecialchars(sf_term('log_delete_alt', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>" 
-                                             class="sf-log-delete-icon">
-                                    </button>
-                                <?php endif; ?>
-                                <div class="sf-log-avatar" data-name="<?= htmlspecialchars($fullName) ?>">
-                                    <?= htmlspecialchars($avatarTxt) ?>
-                                </div>
+                        <?php if ($showBodyMapInTab && $canAccessSettings): ?>
+                        <div class="sf-additional-info-bodymap" style="margin-bottom: 1.25rem;">
+                            <button type="button" id="sfTabBodyMapBtn"
+                                    class="sf-btn sf-btn-secondary"
+                                    style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/injury_icon.svg"
+                                     width="18" height="18" alt="" aria-hidden="true">
+                                <?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                            </button>
+                        </div>
+                        <?php endif; ?>
 
-                                <div>
-                                    <div class="sf-log-header-row" role="group" aria-label="<?= htmlspecialchars($eventLabel) ?>">
-                                        <span class="sf-log-type"><?= htmlspecialchars($eventLabel) ?></span>
-                                        <span class="sf-log-time"><?= htmlspecialchars($logRow['created_at'] ?? '') ?></span>
+                        <?php if ($canAccessSettings): ?>
+                        <div class="sf-additional-info-form" style="margin-bottom: 1.25rem;">
+                            <textarea
+                                id="sfAdditionalInfoTextarea"
+                                class="sf-form-control"
+                                rows="4"
+                                placeholder="<?= htmlspecialchars(sf_term('additional_info_placeholder', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>"
+                                style="width: 100%; resize: vertical; margin-bottom: 0.5rem;"
+                            ></textarea>
+                            <button type="button" id="sfAddAdditionalInfoBtn" class="sf-btn sf-btn-primary">
+                                <?= htmlspecialchars(sf_term('additional_info_add_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                            </button>
+                            <span id="sfAdditionalInfoStatus" style="margin-left: 0.75rem; font-size: 0.875rem;" aria-live="polite"></span>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="sf-additional-info-list" id="sfAdditionalInfoList">
+                            <?php foreach ($additionalInfoEntries as $aiEntry): ?>
+                                <?php
+                                $aiFirst = trim((string)($aiEntry['first_name'] ?? ''));
+                                $aiLast  = trim((string)($aiEntry['last_name'] ?? ''));
+                                $aiName  = trim($aiFirst . ' ' . $aiLast) ?: sf_term('additional_info_unknown_author', $currentUiLang);
+                                ?>
+                                <div class="sf-additional-info-item" data-ai-id="<?= (int)$aiEntry['id'] ?>" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.875rem; margin-bottom: 0.75rem; background: #f9fafb;">
+                                    <div class="sf-ai-meta" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.4rem;">
+                                        <?= htmlspecialchars($aiName, ENT_QUOTES, 'UTF-8') ?>
+                                        &middot;
+                                        <?= htmlspecialchars($aiEntry['created_at'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                                     </div>
-
-                                    <div class="sf-log-message<?= $needsMore ? '' : ' expanded' ?>">
-                                        <?= nl2br($descHighlighted) ?>
-                                    </div>
-
-                                    <?php if ($needsMore): ?>
-                                        <div
-                                          class="sf-log-more"
-                                          role="button"
-                                          tabindex="0"
-                                          aria-expanded="false"
-                                        >
-                                          <?= htmlspecialchars(sf_term('log_show_more', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="sf-log-meta" aria-hidden="false">
-                                    <div class="sf-log-user">
-                                        <?= $fullName !== '' ? htmlspecialchars($fullName) : htmlspecialchars(sf_term('log_system_user', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                                    <div class="sf-ai-content" style="white-space: pre-wrap; word-break: break-word;">
+                                        <?= nl2br(htmlspecialchars($aiEntry['content'], ENT_QUOTES, 'UTF-8')) ?>
                                     </div>
                                 </div>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+
                     </div>
                 </div>
-
                 <!-- VERSIOT TAB -->
                 <div class="sf-tab-content" id="tabVersions">
                     <div class="sf-versions-container">
@@ -4182,26 +4004,6 @@ function closePublishSingleModal() {
     };
 
     function initSettingsModal() {
-        // Open body map from settings modal
-        var bodyMapBtn = document.getElementById('sfSettingsBodyMapBtn');
-        if (bodyMapBtn) {
-            bodyMapBtn.addEventListener('click', function () {
-                // Close settings modal
-                var settingsModal = document.getElementById('sfReportSettingsModal');
-                if (settingsModal) {
-                    settingsModal.classList.add('hidden');
-                }
-                // Open body map modal
-                var bodyMapModal = document.getElementById('sfBodyMapModal');
-                if (bodyMapModal) {
-                    bodyMapModal.classList.remove('hidden');
-                    document.body.classList.add('sf-modal-open');
-                    var focusable = bodyMapModal.querySelector('button, [href], input, select, textarea');
-                    if (focusable) { focusable.focus({ preventScroll: true }); }
-                }
-            });
-        }
-
         // Auto-save original type on change
         var originalTypeSelect = document.getElementById('sfOriginalTypeSelect');
         if (originalTypeSelect) {
@@ -4257,6 +4059,136 @@ function closePublishSingleModal() {
         document.addEventListener('DOMContentLoaded', initSettingsModal);
     } else {
         initSettingsModal();
+    }
+})();
+</script>
+<?php endif; ?>
+
+<!-- Body map button in Lisätiedot tab -->
+<?php if ($canAccessSettings && $showBodyMapInTab): ?>
+<script>
+(function () {
+    'use strict';
+    function initTabBodyMap() {
+        var btn = document.getElementById('sfTabBodyMapBtn');
+        if (!btn) { return; }
+        btn.addEventListener('click', function () {
+            var bodyMapModal = document.getElementById('sfBodyMapModal');
+            if (bodyMapModal) {
+                bodyMapModal.classList.remove('hidden');
+                document.body.classList.add('sf-modal-open');
+                var focusable = bodyMapModal.querySelector('button, [href], input, select, textarea');
+                if (focusable) { focusable.focus({ preventScroll: true }); }
+            }
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTabBodyMap);
+    } else {
+        initTabBodyMap();
+    }
+})();
+</script>
+<?php endif; ?>
+
+<!-- Additional Info AJAX -->
+<?php if ($canAccessSettings): ?>
+<script>
+(function () {
+    'use strict';
+
+    var flashId       = <?= (int)$flash['id'] ?>;
+    var csrfToken     = window.SF_CSRF_TOKEN || '';
+    var additionalApiUrl = '<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/app/api/save_additional_info.php';
+
+    var aiMsgs = {
+        saved:         <?= json_encode(sf_term('additional_info_saved', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        error:         <?= json_encode(sf_term('additional_info_save_error', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+        unknownAuthor: <?= json_encode(sf_term('additional_info_unknown_author', $currentUiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    };
+
+    function renderEntry(entry) {
+        var name = ((entry.first_name || '') + ' ' + (entry.last_name || '')).trim() || aiMsgs.unknownAuthor;
+        var div = document.createElement('div');
+        div.className = 'sf-additional-info-item';
+        div.dataset.aiId = entry.id;
+        div.style.cssText = 'border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.875rem; margin-bottom: 0.75rem; background: #f9fafb;';
+        div.innerHTML =
+            '<div class="sf-ai-meta" style="font-size: 0.8rem; color: #6b7280; margin-bottom: 0.4rem;">' +
+                escapeHtml(name) + ' &middot; ' + escapeHtml(entry.created_at || '') +
+            '</div>' +
+            '<div class="sf-ai-content" style="white-space: pre-wrap; word-break: break-word;">' +
+                escapeHtml(entry.content || '').replace(/\n/g, '<br>') +
+            '</div>';
+        return div;
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function init() {
+        var btn      = document.getElementById('sfAddAdditionalInfoBtn');
+        var textarea = document.getElementById('sfAdditionalInfoTextarea');
+        var status   = document.getElementById('sfAdditionalInfoStatus');
+        var list     = document.getElementById('sfAdditionalInfoList');
+
+        if (!btn || !textarea || !list) { return; }
+
+        btn.addEventListener('click', function () {
+            var content = textarea.value.trim();
+            if (!content) { return; }
+
+            btn.disabled = true;
+            if (status) { status.textContent = ''; }
+
+            var formData = new FormData();
+            formData.append('flash_id', flashId);
+            formData.append('content', content);
+            formData.append('csrf_token', csrfToken);
+
+            fetch(additionalApiUrl, { method: 'POST', body: formData })
+                .then(function (r) {
+                    if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                    return r.json();
+                })
+                .then(function (data) {
+                    if (data.ok && data.entry) {
+                        list.appendChild(renderEntry(data.entry));
+                        textarea.value = '';
+                        if (status) {
+                            status.textContent = aiMsgs.saved;
+                            status.style.color = '#16a34a';
+                            setTimeout(function () { status.textContent = ''; }, 2500);
+                        }
+                    } else {
+                        if (status) {
+                            status.textContent = aiMsgs.error;
+                            status.style.color = '#dc2626';
+                        }
+                    }
+                })
+                .catch(function () {
+                    if (status) {
+                        status.textContent = aiMsgs.error;
+                        status.style.color = '#dc2626';
+                    }
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 })();
 </script>

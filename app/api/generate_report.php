@@ -81,6 +81,33 @@ try {
     ");
     $stmt->execute([$flashId]);
     $extraImages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch additional info entries
+    $additionalInfoEntries = [];
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS sf_flash_additional_info (
+                id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                flash_id   INT UNSIGNED NOT NULL,
+                user_id    INT UNSIGNED NOT NULL,
+                content    TEXT         NOT NULL,
+                created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_flash_id (flash_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+        $aiStmt = $pdo->prepare("
+            SELECT ai.content, ai.created_at, u.first_name, u.last_name
+            FROM sf_flash_additional_info ai
+            LEFT JOIN sf_users u ON u.id = ai.user_id
+            WHERE ai.flash_id = ?
+            ORDER BY ai.created_at ASC
+        ");
+        $aiStmt->execute([$flashId]);
+        $additionalInfoEntries = $aiStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $aiErr) {
+        error_log('generate_report: failed to fetch additional_info: ' . $aiErr->getMessage());
+    }
     
     // Configure Dompdf
     $options = new Options();

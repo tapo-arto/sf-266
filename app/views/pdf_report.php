@@ -39,9 +39,9 @@ $fontRegularPath = $fontDir . '/OpenSans-Regular.ttf';
 $fontBoldPath = $fontDir . '/OpenSans-Bold.ttf';
 
 $labels = [
-    'fi' => ['report_title' => 'Tutkintatiedote', 'site' => 'Työmaa', 'date' => 'Tapahtumapäivä', 'short_description' => 'Tiivistelmä', 'description' => 'Tapahtumakuvaus', 'images' => 'Kuvat', 'root_causes' => 'Juurisyyanalyysi', 'actions' => 'Korjaavat toimenpiteet', 'author' => 'Laatija', 'approver' => 'Hyväksyjä', 'safetyflash_card' => 'SafetyFlash-kortti', 'original_flash' => 'Alkuperäinen SafetyFlash'],
-    'sv' => ['report_title' => 'Undersökningsrapport', 'site' => 'Arbetsplats', 'date' => 'Händelsedatum', 'short_description' => 'Sammanfattning', 'description' => 'Händelsebeskrivning', 'images' => 'Bilder', 'root_causes' => 'Grundorsaksanalys', 'actions' => 'Korrigerande åtgärder', 'author' => 'Författare', 'approver' => 'Godkännare', 'safetyflash_card' => 'SafetyFlash-kort', 'original_flash' => 'Ursprunglig SafetyFlash'],
-    'en' => ['report_title' => 'Investigation Report', 'site' => 'Worksite', 'date' => 'Incident Date', 'short_description' => 'Executive Summary', 'description' => 'Incident Description', 'images' => 'Images', 'root_causes' => 'Root Cause Analysis', 'actions' => 'Corrective Actions', 'author' => 'Author', 'approver' => 'Approved by', 'safetyflash_card' => 'SafetyFlash Card', 'original_flash' => 'Original SafetyFlash'],
+    'fi' => ['report_title' => 'Tutkintatiedote', 'site' => 'Työmaa', 'date' => 'Tapahtumapäivä', 'short_description' => 'Tiivistelmä', 'description' => 'Tapahtumakuvaus', 'images' => 'Kuvat', 'root_causes' => 'Juurisyyanalyysi', 'actions' => 'Korjaavat toimenpiteet', 'author' => 'Laatija', 'approver' => 'Hyväksyjä', 'safetyflash_card' => 'SafetyFlash-kortti', 'original_flash' => 'Alkuperäinen SafetyFlash', 'additional_info_pdf_section' => 'Lisätiedot tapahtumasta'],
+    'sv' => ['report_title' => 'Undersökningsrapport', 'site' => 'Arbetsplats', 'date' => 'Händelsedatum', 'short_description' => 'Sammanfattning', 'description' => 'Händelsebeskrivning', 'images' => 'Bilder', 'root_causes' => 'Grundorsaksanalys', 'actions' => 'Korrigerande åtgärder', 'author' => 'Författare', 'approver' => 'Godkännare', 'safetyflash_card' => 'SafetyFlash-kort', 'original_flash' => 'Ursprunglig SafetyFlash', 'additional_info_pdf_section' => 'Ytterligare information om händelsen'],
+    'en' => ['report_title' => 'Investigation Report', 'site' => 'Worksite', 'date' => 'Incident Date', 'short_description' => 'Executive Summary', 'description' => 'Incident Description', 'images' => 'Images', 'root_causes' => 'Root Cause Analysis', 'actions' => 'Corrective Actions', 'author' => 'Author', 'approver' => 'Approved by', 'safetyflash_card' => 'SafetyFlash Card', 'original_flash' => 'Original SafetyFlash', 'additional_info_pdf_section' => 'Additional information about the event'],
 ];
 $lang = $flash['lang'] ?? 'fi';
 $l = $labels[$lang] ?? $labels['fi'];
@@ -657,6 +657,31 @@ if (!empty($gridBitmap)):
         </tr>
         <?php endforeach; ?>
     </table>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($additionalInfoEntries)): ?>
+<div class="page-break"></div>
+<div class="section" style="margin-top: 0;">
+    <div class="section-header"><?= htmlspecialchars($l['additional_info_pdf_section'] ?? 'Lisätiedot tapahtumasta') ?></div>
+    <?php foreach ($additionalInfoEntries as $aiEntry): ?>
+        <?php
+        $aiFirst = trim((string)($aiEntry['first_name'] ?? ''));
+        $aiLast  = trim((string)($aiEntry['last_name'] ?? ''));
+        $aiName  = trim($aiFirst . ' ' . $aiLast) ?: '';
+        $aiDate  = $aiEntry['created_at'] ?? '';
+        $aiContent = trim((string)($aiEntry['content'] ?? ''));
+        ?>
+        <div class="content-box" style="margin-bottom: 12px;">
+            <?php if ($aiName !== '' || $aiDate !== ''): ?>
+            <div style="font-size: 9pt; color: #6b7280; margin-bottom: 4px;">
+                <?php if ($aiName !== ''): ?><?= htmlspecialchars($aiName) ?><?php endif; ?>
+                <?php if ($aiDate !== ''): ?>&nbsp;&middot;&nbsp;<?= htmlspecialchars($aiDate) ?><?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <div><?= nl2br(htmlspecialchars($aiContent)) ?></div>
+        </div>
+    <?php endforeach; ?>
 </div>
 <?php endif; ?>
 

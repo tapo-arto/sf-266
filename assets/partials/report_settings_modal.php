@@ -62,16 +62,7 @@ $_settingsShowBodyMap = ($_settingsCurrentType !== 'yellow' && $_settingsCurrent
 
             <!-- Body map -->
             <?php if ($_settingsShowBodyMap): ?>
-            <div class="sf-settings-field">
-                <p class="sf-settings-label">
-                    <?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-                </p>
-                <button type="button" id="sfSettingsBodyMapBtn" class="sf-btn sf-btn-secondary sf-settings-bodymap-btn">
-                    <img src="<?= htmlspecialchars($base, ENT_QUOTES, 'UTF-8') ?>/assets/img/icons/injury_icon.svg"
-                         width="18" height="18" alt="" aria-hidden="true">
-                    <?= htmlspecialchars(sf_term('body_map_open_btn', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-                </button>
-            </div>
+            <!-- Body map button moved to Lisätiedot tab -->
             <?php endif; ?>
 
         </div>
