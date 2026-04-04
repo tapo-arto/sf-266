@@ -13,10 +13,14 @@
  */
 function buildBodyPartSvg(string $id, string $svgFile, int $x, int $y, int $w, int $h): string
 {
-    if (!file_exists($svgFile)) {
+    // Validate that the resolved path stays within the expected directory
+    $realBase = realpath(dirname($svgFile));
+    $realFile = realpath($svgFile);
+    if ($realFile === false || $realBase === false || strncmp($realFile, $realBase, strlen($realBase)) !== 0) {
         return '';
     }
-    $raw = @file_get_contents($svgFile);
+
+    $raw = file_get_contents($realFile);
     if ($raw === false || $raw === '') {
         return '';
     }
@@ -35,6 +39,12 @@ function buildBodyPartSvg(string $id, string $svgFile, int $x, int $y, int $w, i
 
     // Remove any residual XML/DOCTYPE declarations
     $inner = preg_replace('/<\?xml[^>]*\?>\s*/', '', $inner);
+
+    // Strip potentially dangerous SVG elements and attributes
+    $inner = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $inner);
+    $inner = preg_replace('/\s+on\w+="[^"]*"/i', '', $inner);
+    $inner = preg_replace('/\s+on\w+=\'[^\']*\'/i', '', $inner);
+    $inner = preg_replace('/href\s*=\s*["\']?\s*javascript:[^"\'>\s]*/i', '', $inner);
 
     // Remove hardcoded fill/stroke so CSS (.sf-bp) can control appearance
     $inner = preg_replace('/\s+fill="[^"]*"/', '', $inner);

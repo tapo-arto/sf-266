@@ -79,8 +79,12 @@
     function getCanonicalId(svgId) {
         if (svgId.endsWith('-back')) {
             var withoutBack = svgId.slice(0, -5);
-            if (select && select.querySelector('option[value="' + withoutBack + '"]')) {
-                return withoutBack;
+            // Only query if the ID contains safe characters (alphanumeric and hyphens only)
+            if (/^[\w-]+$/.test(withoutBack)) {
+                var escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(withoutBack) : withoutBack;
+                if (select && select.querySelector('option[value="' + escaped + '"]')) {
+                    return withoutBack;
+                }
             }
         }
         return svgId;
@@ -158,8 +162,9 @@
      * <option>-tekstisisällöstä (monikielisyys toimii automaattisesti).
      */
     function getLabel(canonicalId) {
-        if (select) {
-            var opt = select.querySelector('option[value="' + canonicalId + '"]');
+        if (select && /^[\w-]+$/.test(canonicalId)) {
+            var escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(canonicalId) : canonicalId;
+            var opt = select.querySelector('option[value="' + escaped + '"]');
             if (opt) return opt.textContent.trim();
         }
         return canonicalId;
