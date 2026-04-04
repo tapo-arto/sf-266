@@ -18,6 +18,7 @@ try {
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../includes/protect.php';
 require_once __DIR__ . '/../services/ApprovalRouting.php';
+require_once __DIR__ . '/helpers.php';
 
 $flashId = isset($_POST['flash_id']) ? (int)$_POST['flash_id'] : 0;
 $message = isset($_POST['message']) ? trim($_POST['message']) : '';
@@ -64,13 +65,8 @@ if (!$isAdmin && (!$isSupervisor || !$isSelectedApprover)) {
     exit;
 }
 
-// Update state to pending_review
-$stmt = $pdo->prepare("
-    UPDATE sf_flashes 
-    SET state = 'pending_review', updated_at = NOW() 
-    WHERE id = :id
-");
-$stmt->execute([':id' => $flashId]);
+// Update state to pending_review for all language versions in the bundle
+sf_update_state_all_languages($pdo, $flashId, 'pending_review');
 
 // Log event
 require_once __DIR__ . '/../includes/log.php';
