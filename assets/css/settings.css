@@ -2071,12 +2071,14 @@
     }
 
     .sf-audit-table tbody td {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        padding: 8px 0;
+        display: block;
+        position: relative;
+        padding: 8px 0 8px 110px;
         border-bottom: 1px solid #f1f5f9;
-        text-align: right;
+        text-align: left;
+        min-height: 24px;
+        word-wrap: break-word;
+        word-break: break-word;
     }
 
     .sf-audit-table tbody td:last-child {
@@ -2085,17 +2087,21 @@
 
     .sf-audit-table tbody td::before {
         content: attr(data-label);
+        position: absolute;
+        left: 0;
+        top: 8px;
         font-weight: 600;
         font-size: 0.8rem;
         color: #475569;
         text-transform: uppercase;
-        margin-right: 15px;
+        width: 100px;
         text-align: left;
-        flex-shrink: 0;
     }
 
     .sf-audit-user .user-email {
-        max-width: none;
+        display: block;
+        max-width: 100%;
+        word-break: break-all;
     }
 
 }
