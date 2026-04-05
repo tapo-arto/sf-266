@@ -25,44 +25,46 @@ $user    = sf_current_user();
 $isAdmin = $user && (int)$user['role_id'] === 1;
 
 // --- Updates notification badge ---
-$hasNewUpdates = false;
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-    || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443);
+$unreadUpdatesCount = 0;
 if ($currentPage === 'updates') {
-    // User is on the Updates page – mark all current updates as seen
-    setcookie('sf_updates_last_seen', (string)time(), [
-        'expires'  => time() + (365 * 24 * 60 * 60),
-        'path'     => '/',
-        'secure'   => $isHttps,
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+    // User is on the Updates page – persist the current timestamp per user in the DB
+    if ($user) {
+        try {
+            $db = Database::getInstance();
+            $db->prepare("UPDATE sf_users SET updates_last_seen_at = NOW() WHERE id = ?")
+               ->execute([(int)$user['id']]);
+        } catch (Exception $e) {
+            // Silently ignore DB errors
+        }
+    }
     // Invalidate the session cache so the badge disappears immediately
     unset($_SESSION['sf_updates_badge_cache']);
 } else {
-    // Check whether there are published updates newer than the last visit.
-    // Cache the latest update timestamp in the session for 120 seconds to reduce DB load.
-    $lastSeen = isset($_COOKIE['sf_updates_last_seen']) ? (int)$_COOKIE['sf_updates_last_seen'] : 0;
+    // Count published updates created after the user's last visit.
+    // Cache the count in the session for 120 seconds to reduce DB load.
     $cachedBadge = $_SESSION['sf_updates_badge_cache'] ?? null;
     if ($cachedBadge !== null && (time() - (int)($cachedBadge['fetched'] ?? 0)) < 120) {
-        $hasNewUpdates = (int)($cachedBadge['latest_ts'] ?? 0) > $lastSeen;
+        $unreadUpdatesCount = (int)($cachedBadge['count'] ?? 0);
     } else {
         try {
             $db = Database::getInstance();
-            $stmt = $db->prepare(
-                "SELECT UNIX_TIMESTAMP(created_at) AS created_ts
-                 FROM sf_changelog
-                 WHERE is_published = 1
-                 ORDER BY created_at DESC
-                 LIMIT 1"
-            );
-            $stmt->execute();
-            $latestUpdate = $stmt->fetch(PDO::FETCH_ASSOC);
-            $latestTs = $latestUpdate ? (int)$latestUpdate['created_ts'] : 0;
-            $_SESSION['sf_updates_badge_cache'] = ['fetched' => time(), 'latest_ts' => $latestTs];
-            if ($latestTs > $lastSeen) {
-                $hasNewUpdates = true;
+            if ($user) {
+                $stmt = $db->prepare(
+                    "SELECT COUNT(*) AS cnt
+                     FROM sf_changelog
+                     WHERE is_published = 1
+                       AND created_at > COALESCE(
+                             (SELECT updates_last_seen_at FROM sf_users WHERE id = ?),
+                             '1970-01-01 00:00:00'
+                           )"
+                );
+                $stmt->execute([(int)$user['id']]);
+            } else {
+                $stmt = $db->query("SELECT 0 AS cnt");
             }
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $unreadUpdatesCount = (int)($row['cnt'] ?? 0);
+            $_SESSION['sf_updates_badge_cache'] = ['fetched' => time(), 'count' => $unreadUpdatesCount];
         } catch (Exception $e) {
             // Silently ignore DB errors – badge simply won't show
         }
@@ -299,8 +301,8 @@ sf_session_activity_tick(['is_api' => false, 'is_fetch' => false]);
                              class="sf-nav-link-icon"
                              aria-hidden="true">
                         <span><?= htmlspecialchars(sf_term('nav_updates', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
-                        <?php if ($hasNewUpdates): ?>
-                        <span class="sf-nav-badge" aria-label="<?= htmlspecialchars(sf_term('updates_new_badge', $uiLang), ENT_QUOTES, 'UTF-8') ?>"></span>
+                        <?php if ($unreadUpdatesCount > 0): ?>
+                        <span class="sf-nav-badge" aria-label="<?= htmlspecialchars(sf_term('updates_new_badge', $uiLang), ENT_QUOTES, 'UTF-8') ?>"><?= $unreadUpdatesCount ?></span>
                         <?php endif; ?>
                     </a>
 
