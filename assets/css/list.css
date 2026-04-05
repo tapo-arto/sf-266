@@ -81,6 +81,31 @@ form.filters {
     box-sizing: border-box;
 }
 
+.filter-item-checkbox {
+    display: flex;
+    align-items: flex-end;
+}
+
+.filter-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    padding: 10px 4px;
+    margin-bottom: 0;
+}
+
+.filter-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
 .search-row {
     display: flex;
     gap: 8px;

@@ -57,6 +57,7 @@
     const filterDateFrom = document.getElementById('f-from');
     const filterDateTo = document.getElementById('f-to');
     const filterArchived = document.getElementById('f-archived');
+    const filterOnlyOriginals = document.getElementById('f-only-originals');
     const filtersForm = document.querySelector('.filters');
     const submitBtn = document.getElementById('filter-submit-btn');
     const clearBtn = document.getElementById('filter-clear-btn');
@@ -367,6 +368,15 @@
 
             // Sort chip has its own dedicated handler, skip here
             if (filterName === 'sort') return;
+
+            // Only-originals is a simple toggle chip
+            if (filterName === 'only_originals') {
+                if (filterOnlyOriginals) {
+                    filterOnlyOriginals.checked = !filterOnlyOriginals.checked;
+                }
+                applyListFilters();
+                return;
+            }
 
             if (window.innerWidth <= 768) {
                 // Mobile: open bottom sheet
@@ -1057,6 +1067,7 @@
         const dateFromVal = hasDateControls ? filterDateFrom.value : '';
         const dateToVal = hasDateControls ? filterDateTo.value : '';
         const archivedVal = hasArchivedControl ? filterArchived.value : '';
+        const onlyOriginalsVal = filterOnlyOriginals ? filterOnlyOriginals.checked : false;
 
         if (typeVal) { params.set('type', typeVal); } else { params.delete('type'); }
         if (stateVal) { params.set('state', stateVal); } else { params.delete('state'); }
@@ -1068,6 +1079,7 @@
         if (dateFromVal) { params.set('date_from', dateFromVal); } else { params.delete('date_from'); }
         if (dateToVal) { params.set('date_to', dateToVal); } else { params.delete('date_to'); }
         if (archivedVal) { params.set('archived', archivedVal); } else { params.delete('archived'); }
+        if (onlyOriginalsVal) { params.set('only_originals', '1'); } else { params.delete('only_originals'); }
 
         // Reset to page 1 whenever filters change
         params.delete('p');
@@ -1088,7 +1100,8 @@
             (siteInUrl && filterSite.value !== '') ||
             filterSearch.value !== '' ||
             (hasDateControls && filterDateFrom.value !== '') ||
-            (hasDateControls && filterDateTo.value !== '');
+            (hasDateControls && filterDateTo.value !== '') ||
+            (filterOnlyOriginals && filterOnlyOriginals.checked);
 
         // Näytä/piilota napit
         if (clearBtn) {
@@ -1198,6 +1211,9 @@
                     chip.classList.remove('active');
                     chipLabel.textContent = i18n.filterDate || 'Päivämäärä';
                 }
+            } else if (filterName === 'only_originals') {
+                const isActive = filterOnlyOriginals ? filterOnlyOriginals.checked : false;
+                chip.classList.toggle('active', isActive);
             }
         });
     }
@@ -1343,6 +1359,9 @@
     if (hasArchivedControl) {
         filterArchived.addEventListener('change', applyListFilters);
     }
+    if (filterOnlyOriginals) {
+        filterOnlyOriginals.addEventListener('change', applyListFilters);
+    }
 
     // ===== CLEAR FILTERS =====
     if (clearBtn) {
@@ -1356,6 +1375,7 @@
             filterDateFrom.value = '';
             filterDateTo.value = '';
             filterArchived.value = '';
+            if (filterOnlyOriginals) { filterOnlyOriginals.checked = false; }
 
             // Reset archived toggle
             toggleBtns.forEach(btn => {
@@ -1385,6 +1405,7 @@
             url.searchParams.delete('q');
             url.searchParams.delete('date_from');
             url.searchParams.delete('date_to');
+            url.searchParams.delete('only_originals');
             // Keep 'archived' parameter
 
             // Reload page

@@ -80,6 +80,20 @@ return [
     'it' => 'Tipo',
     'el' => 'Τύπος',
 ],
+'filter_only_originals' => [
+    'fi' => 'Vain alkuperäiset',
+    'sv' => 'Endast original',
+    'en' => 'Originals only',
+    'it' => 'Solo originali',
+    'el' => 'Μόνο πρωτότυπα',
+],
+'filter_chip_only_originals' => [
+    'fi' => 'Alkuperäiset',
+    'sv' => 'Original',
+    'en' => 'Originals',
+    'it' => 'Originali',
+    'el' => 'Πρωτότυπα',
+],
 'filter_original_type' => [
     'fi' => 'Alkuperäinen tyyppi',
     'sv' => 'Ursprunglig typ',
