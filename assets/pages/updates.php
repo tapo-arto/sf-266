@@ -171,8 +171,6 @@ function sf_updates_sanitize_html(string $html): string
     display: flex;
     flex-direction: column;
     gap: 0;
-    max-width: 760px;
-    margin: 0 auto;
     padding: 24px 0;
     position: relative;
 }
