@@ -717,8 +717,6 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
             <?= htmlspecialchars(sf_term('filter_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
         </option>
     </select>
-
-    <input id="f-only-originals" type="checkbox" name="only_originals" value="1" <?= $onlyOriginals ? 'checked' : '' ?>>
 </div>
 
 <!-- FILTER BAR -->
@@ -782,7 +780,7 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
 
             <div class="filter-item filter-item-checkbox">
                 <label class="filter-checkbox-label">
-                    <input type="checkbox" name="only_originals" value="1" <?= $onlyOriginals ? 'checked' : '' ?>>
+                    <input id="f-only-originals" type="checkbox" name="only_originals" value="1" <?= $onlyOriginals ? 'checked' : '' ?>>
                     <?= htmlspecialchars(sf_term('filter_only_originals', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                 </label>
             </div>

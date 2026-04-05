@@ -106,7 +106,7 @@ try {
     $upd->execute([':original_type' => $originalTypeValue, ':id' => $flashId]);
 
     // Sync original_type to all language versions in the same translation group
-    $groupId = !empty($flash['translation_group_id']) ? (int)$flash['translation_group_id'] : $flashId;
+    $groupId = $flash['translation_group_id'] !== null ? (int)$flash['translation_group_id'] : $flashId;
     $sync = $pdo->prepare(
         "UPDATE sf_flashes SET original_type = :original_type
          WHERE (id = :group_id OR translation_group_id = :group_id2)
