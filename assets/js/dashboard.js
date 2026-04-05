@@ -361,12 +361,15 @@
             var count = entry[1];
             var barWidth = Math.round((count / maxCat) * 100);
 
+            var barClass = count === 0
+                ? 'sf-injury-chart-bar sf-injury-chart-bar--zero'
+                : 'sf-injury-chart-bar';
             var row = document.createElement('div');
             row.className = 'sf-injury-chart-row';
             row.innerHTML =
-                '<span class="sf-injury-chart-label">' + escapeHtml(cat) + '</span>' +
+                '<span class="sf-injury-chart-label' + (count === 0 ? ' sf-injury-chart-label--zero' : '') + '">' + escapeHtml(cat) + '</span>' +
                 '<div class="sf-injury-chart-bar-wrap">' +
-                    '<div class="sf-injury-chart-bar" style="--bar-width: ' + barWidth + '%;">' +
+                    '<div class="' + barClass + '" style="--bar-width: ' + barWidth + '%;">' +
                         '<span class="sf-injury-chart-count">' + count + '</span>' +
                     '</div>' +
                 '</div>';
@@ -400,9 +403,10 @@
         list.forEach(function (flash) {
             var item       = document.createElement('a');
             item.href      = baseUrl + '/index.php?page=view&id=' + encodeURIComponent(flash.id);
-            item.className = 'sf-recent-compact-item';
+            item.className = 'sf-recent-compact-item sf-injury-flash-item';
+            item.dataset.flashType = flash.type || '';
 
-            var timeStr = flash.updated_at ? jsTimeAgo(flash.updated_at) : '';
+            var dateStr = flash.updated_at ? formatDate(flash.updated_at) : '';
 
             item.innerHTML =
                 '<span class="sf-type-dot sf-type-dot--' + escapeHtml(flash.type) + '"></span>' +
@@ -410,7 +414,7 @@
                     '<div class="sf-recent-compact-title">' + escapeHtml(flash.title) + '</div>' +
                     '<div class="sf-recent-compact-meta">' +
                         (flash.site ? '<span>' + escapeHtml(flash.site) + '</span><span>·</span>' : '') +
-                        '<span class="sf-recent-compact-time">' + escapeHtml(timeStr) + '</span>' +
+                        '<span class="sf-recent-compact-time">' + escapeHtml(dateStr) + '</span>' +
                     '</div>' +
                 '</div>';
 
@@ -528,6 +532,19 @@
                 fetchInjuryData(Object.assign({}, currentTimeParams, { site: this.value }));
             });
         }
+    }
+
+    // -------------------------------------------------------
+    // Format a date string as DD.MM.YYYY
+    // -------------------------------------------------------
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr.replace(' ', 'T'));
+        if (isNaN(d.getTime())) return dateStr;
+        var day   = String(d.getDate()).padStart(2, '0');
+        var month = String(d.getMonth() + 1).padStart(2, '0');
+        var year  = d.getFullYear();
+        return day + '.' + month + '.' + year;
     }
 
     // -------------------------------------------------------
