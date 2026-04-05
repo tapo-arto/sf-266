@@ -99,7 +99,9 @@ function sf_updates_sanitize_html(string $html): string
         // Build sorted unique month list for filter buttons
         $months = [];
         foreach ($entries as $e) {
-            $ts  = !empty($e['publish_date']) ? strtotime($e['publish_date']) : strtotime($e['created_at']);
+            $rawDate = !empty($e['publish_date']) ? $e['publish_date'] : $e['created_at'];
+            $ts = strtotime($rawDate);
+            if ($ts === false) { continue; }
             $key = date('Y-m', $ts);
             if (!isset($months[$key])) {
                 // Localise month label: use IntlDateFormatter when available, otherwise a manual map
@@ -156,9 +158,9 @@ function sf_updates_sanitize_html(string $html): string
                 $title   = resolveTranslation($translations, $uiLang, 'title');
                 $content = resolveTranslation($translations, $uiLang, 'content');
                 // Use publish_date when set, otherwise fall back to created_at
-                $displayTimestamp = !empty($entry['publish_date'])
-                    ? strtotime($entry['publish_date'])
-                    : strtotime($entry['created_at']);
+                $rawDate = !empty($entry['publish_date']) ? $entry['publish_date'] : $entry['created_at'];
+                $displayTimestamp = strtotime($rawDate);
+                if ($displayTimestamp === false) { $displayTimestamp = time(); }
                 $dateStr  = date('d.m.Y', $displayTimestamp);
                 $monthKey = date('Y-m', $displayTimestamp);
                 $entryId  = (int)$entry['id'];

@@ -82,9 +82,9 @@ $csrfToken = sf_csrf_token();
                 $authorName = trim(($entry['first_name'] ?? '') . ' ' . ($entry['last_name'] ?? ''));
                 if ($authorName === '') $authorName = 'Admin';
                 // Show publish_date in admin listing when set, otherwise created_at
-                $displayTs = !empty($entry['publish_date'])
-                    ? strtotime($entry['publish_date'])
-                    : strtotime($entry['created_at']);
+                $rawDisplayDate = !empty($entry['publish_date']) ? $entry['publish_date'] : $entry['created_at'];
+                $displayTs = strtotime($rawDisplayDate);
+                if ($displayTs === false) { $displayTs = time(); }
                 $dateStr = date('d.m.Y', $displayTs);
                 ?>
                 <div class="sf-updates-admin-item" id="update-row-<?= (int)$entry['id'] ?>">

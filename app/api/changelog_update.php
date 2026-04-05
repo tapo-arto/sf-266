@@ -40,11 +40,14 @@ $rawJson     = trim($_POST['translations'] ?? '');
 $isPublished = (int)($_POST['is_published'] ?? 0) === 1 ? 1 : 0;
 $feedbackId  = (int)($_POST['feedback_id'] ?? 0);
 
-// Optional publish date override; validate format YYYY-MM-DD
+// Optional publish date override; validate format and actual date validity
 $publishDateRaw = trim($_POST['publish_date'] ?? '');
 $publishDate    = null;
-if ($publishDateRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $publishDateRaw)) {
-    $publishDate = $publishDateRaw;
+if ($publishDateRaw !== '') {
+    $dt = DateTime::createFromFormat('Y-m-d', $publishDateRaw);
+    if ($dt && $dt->format('Y-m-d') === $publishDateRaw) {
+        $publishDate = $publishDateRaw;
+    }
 }
 
 if ($updateId <= 0) {
