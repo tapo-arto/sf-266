@@ -57,9 +57,10 @@ if ($user) {
 }
 
 // Filters (from URL)
-$type         = $_GET['type']          ?? '';
-$originalType = $_GET['original_type'] ?? '';
-$state        = $_GET['state']         ?? '';
+$type           = $_GET['type']           ?? '';
+$originalType   = $_GET['original_type']  ?? '';
+$onlyOriginals  = isset($_GET['only_originals']) && $_GET['only_originals'] === '1';
+$state          = $_GET['state']          ?? '';
 // Jos URL:ssa ei ole 'site'-parametria lainkaan, käytetään oletuksena kotityömaa-suodatusta SQL:ssä.
 // Jos URL:ssa on tyhjä 'site' (?site=), käyttäjä haluaa nähdä kaikki työmaat (ei suodatusta).
 if (!isset($_GET['site'])) {
@@ -93,7 +94,7 @@ if (!in_array($sortOrder, ['asc', 'desc'])) {
 }
 
 // Tarkista onko käyttäjällä mitään suodattimia URL:ssa
-$hasAnyFilter = isset($_GET['type']) || isset($_GET['original_type']) || isset($_GET['state']) || isset($_GET['site']) || isset($_GET['q']) || isset($_GET['date_from']) || isset($_GET['date_to']) || isset($_GET['archived']);
+$hasAnyFilter = isset($_GET['type']) || isset($_GET['original_type']) || isset($_GET['only_originals']) || isset($_GET['state']) || isset($_GET['site']) || isset($_GET['q']) || isset($_GET['date_from']) || isset($_GET['date_to']) || isset($_GET['archived']);
 
 // $siteIsDefault kertoo, tuliko $site URL-parametrista vai oletuksena kotityömaasta.
 // Käytetään UI-elementtien (chip aktiivisuus, clear-nappi) renderöinnissä.
@@ -115,6 +116,10 @@ if ($type !== '') {
 if ($originalType !== '') {
     $where[]                  = "(f.original_type = :original_type OR (f.original_type IS NULL AND f.type = :original_type))";
     $params[':original_type'] = $originalType;
+}
+
+if ($onlyOriginals) {
+    $where[] = "(f.translation_group_id IS NULL OR f.translation_group_id = f.id)";
 }
 
 if ($state !== '') {
@@ -487,7 +492,7 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
         </button>
         
         <!-- Clear filters -->
-        <?php $hasExplicitFilters = ($type !== '' || $originalType !== '' || $state !== '' || (!$siteIsDefault && $site !== '') || $q !== '' || $from !== '' || $to !== '' || $archived !== ''); ?>
+        <?php $hasExplicitFilters = ($type !== '' || $originalType !== '' || $onlyOriginals || $state !== '' || (!$siteIsDefault && $site !== '') || $q !== '' || $from !== '' || $to !== '' || $archived !== ''); ?>
         <button type="button" class="sf-filter-clear-btn<?= !$hasExplicitFilters ? ' hidden' : '' ?>" id="sf-clear-all-btn" title="<?= htmlspecialchars(sf_term('filter_clear_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -546,6 +551,15 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
             <?php else: ?>
                 <?= htmlspecialchars(sf_term('filter_chip_type_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
             <?php endif; ?>
+        </span>
+        <svg class="chip-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6,9 12,15 18,9"/>
+        </svg>
+    </button>
+
+    <button type="button" class="sf-chip<?= $onlyOriginals ? ' active' : '' ?>" data-filter="only_originals" data-value="<?= $onlyOriginals ? '1' : '' ?>">
+        <span class="chip-label">
+            <?= htmlspecialchars(sf_term('filter_chip_only_originals', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
         </span>
         <svg class="chip-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6,9 12,15 18,9"/>
@@ -762,6 +776,13 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
                         <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                     </option>
                 </select>
+            </div>
+
+            <div class="filter-item filter-item-checkbox">
+                <label class="filter-checkbox-label">
+                    <input id="f-only-originals" type="checkbox" name="only_originals" value="1" <?= $onlyOriginals ? 'checked' : '' ?>>
+                    <?= htmlspecialchars(sf_term('filter_only_originals', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                </label>
             </div>
 
             <div class="filter-item">

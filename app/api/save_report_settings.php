@@ -57,7 +57,7 @@ try {
     $pdo = Database::getInstance();
 
     // Load flash
-    $stmt = $pdo->prepare("SELECT id, created_by, is_archived, state, original_type FROM sf_flashes WHERE id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, created_by, is_archived, state, original_type, translation_group_id FROM sf_flashes WHERE id = ? LIMIT 1");
     $stmt->execute([$flashId]);
     $flash = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -104,6 +104,20 @@ try {
     // Persist
     $upd = $pdo->prepare("UPDATE sf_flashes SET original_type = :original_type WHERE id = :id");
     $upd->execute([':original_type' => $originalTypeValue, ':id' => $flashId]);
+
+    // Sync original_type to all language versions in the same translation group
+    $groupId = $flash['translation_group_id'] !== null ? (int)$flash['translation_group_id'] : $flashId;
+    $sync = $pdo->prepare(
+        "UPDATE sf_flashes SET original_type = :original_type
+         WHERE (id = :group_id OR translation_group_id = :group_id2)
+           AND id != :flash_id"
+    );
+    $sync->execute([
+        ':original_type' => $originalTypeValue,
+        ':group_id'      => $groupId,
+        ':group_id2'     => $groupId,
+        ':flash_id'      => $flashId,
+    ]);
 
     echo json_encode(['ok' => true, 'original_type' => $originalTypeValue], JSON_UNESCAPED_UNICODE);
 
