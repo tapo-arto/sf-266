@@ -5,6 +5,9 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includes/protect.php';
+require_once __DIR__ . '/../../assets/lib/sf_terms.php';
+
+$uiLang = $_SESSION['ui_lang'] ?? 'fi';
 
 try {
     $pdo = Database::getInstance();
@@ -79,7 +82,6 @@ try {
     $sql = "
         SELECT
             bp.svg_id,
-            bp.name,
             bp.category,
             COUNT(DISTINCT COALESCE(f.translation_group_id, f.id)) AS cnt
         FROM body_parts bp
@@ -89,7 +91,7 @@ try {
             AND f.state = 'published'
             $dateFilter
             $siteFilter
-        GROUP BY bp.id, bp.svg_id, bp.name, bp.category
+        GROUP BY bp.id, bp.svg_id, bp.category
         ORDER BY bp.sort_order
     ";
     $stmt = $pdo->prepare($sql);
@@ -97,8 +99,8 @@ try {
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $bodyPartCounts[] = [
             'svg_id'   => $row['svg_id'],
-            'name'     => $row['name'],
-            'category' => $row['category'],
+            'name'     => sf_bp_term($row['svg_id'], $uiLang),
+            'category' => sf_bp_category_term($row['category'], $uiLang),
             'count'    => (int)$row['cnt'],
         ];
     }
