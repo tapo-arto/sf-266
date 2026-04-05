@@ -114,8 +114,9 @@ if ($type !== '') {
 }
 
 if ($originalType !== '') {
-    $where[]                  = "(f.original_type = :original_type OR (f.original_type IS NULL AND f.type = :original_type))";
-    $params[':original_type'] = $originalType;
+    $where[]                   = "(f.original_type = :original_type OR (f.original_type IS NULL AND f.type = :original_type2))";
+    $params[':original_type']  = $originalType;
+    $params[':original_type2'] = $originalType;
 }
 
 if ($onlyOriginals) {
@@ -563,8 +564,6 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
                 <?= htmlspecialchars(sf_term('first_release', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
             <?php elseif ($originalType === 'yellow'): ?>
                 <?= htmlspecialchars(sf_term('dangerous_situation', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-            <?php elseif ($originalType === 'green'): ?>
-                <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
             <?php else: ?>
                 <?= htmlspecialchars(sf_term('filter_chip_original_type_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
             <?php endif; ?>
@@ -680,9 +679,6 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
         <option value="yellow" <?= $originalType === 'yellow' ? 'selected' : '' ?>>
             <?= htmlspecialchars(sf_term('dangerous_situation', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
         </option>
-        <option value="green" <?= $originalType === 'green' ? 'selected' : '' ?>>
-            <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-        </option>
     </select>
 
     <select id="f-state" name="state">
@@ -794,9 +790,6 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
                     </option>
                     <option value="yellow" <?= $originalType === 'yellow' ? 'selected' : '' ?>>
                         <?= htmlspecialchars(sf_term('dangerous_situation', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
-                    </option>
-                    <option value="green" <?= $originalType === 'green' ? 'selected' : '' ?>>
-                        <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                     </option>
                 </select>
             </div>
