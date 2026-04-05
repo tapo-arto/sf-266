@@ -28,7 +28,7 @@ $stmt = $db->prepare(
     "SELECT *
      FROM sf_changelog
      WHERE is_published = 1
-     ORDER BY created_at DESC"
+     ORDER BY COALESCE(publish_date, DATE(created_at)) DESC, created_at DESC"
 );
 $stmt->execute();
 $entries = $stmt->fetchAll();
@@ -95,7 +95,55 @@ function sf_updates_sanitize_html(string $html): string
             <p><?= htmlspecialchars(sf_term('updates_empty', $uiLang), ENT_QUOTES, 'UTF-8') ?></p>
         </div>
     <?php else: ?>
-        <div class="sf-updates-timeline">
+        <?php
+        // Build sorted unique month list for filter buttons
+        $months = [];
+        foreach ($entries as $e) {
+            $ts  = !empty($e['publish_date']) ? strtotime($e['publish_date']) : strtotime($e['created_at']);
+            $key = date('Y-m', $ts);
+            if (!isset($months[$key])) {
+                // Localise month label: use IntlDateFormatter when available, otherwise a manual map
+                if (class_exists('IntlDateFormatter')) {
+                    $localeMap = ['fi' => 'fi_FI', 'sv' => 'sv_SE', 'en' => 'en_US', 'it' => 'it_IT', 'el' => 'el_GR'];
+                    $locale = $localeMap[$uiLang] ?? 'en_US';
+                    $fmt = new IntlDateFormatter(
+                        $locale,
+                        IntlDateFormatter::NONE,
+                        IntlDateFormatter::NONE,
+                        null,
+                        null,
+                        'MMMM yyyy'
+                    );
+                    $label = ucfirst($fmt->format($ts));
+                } else {
+                    $label = date('m/Y', $ts);
+                }
+                $months[$key] = $label;
+            }
+        }
+        ?>
+        <?php if (count($months) > 1): ?>
+        <div class="sf-updates-filter" role="group" aria-label="<?= htmlspecialchars(sf_term('updates_filter_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+            <span class="sf-updates-filter-label">
+                <?= htmlspecialchars(sf_term('updates_filter_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+            </span>
+            <div class="sf-updates-filter-buttons">
+                <button type="button"
+                        class="sf-btn sf-btn-small sf-btn-primary sf-updates-filter-btn"
+                        data-month="all">
+                    <?= htmlspecialchars(sf_term('updates_filter_all', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+                </button>
+                <?php foreach ($months as $key => $label): ?>
+                    <button type="button"
+                            class="sf-btn sf-btn-small sf-btn-secondary sf-updates-filter-btn"
+                            data-month="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>">
+                        <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        <div class="sf-updates-timeline" id="sfUpdatesTimeline">
             <?php foreach ($entries as $entry): ?>
                 <?php
                 $translations = [];
@@ -107,12 +155,17 @@ function sf_updates_sanitize_html(string $html): string
                 }
                 $title   = resolveTranslation($translations, $uiLang, 'title');
                 $content = resolveTranslation($translations, $uiLang, 'content');
-                $dateStr = date('d.m.Y', strtotime($entry['created_at']));
-                $entryId = (int)$entry['id'];
+                // Use publish_date when set, otherwise fall back to created_at
+                $displayTimestamp = !empty($entry['publish_date'])
+                    ? strtotime($entry['publish_date'])
+                    : strtotime($entry['created_at']);
+                $dateStr  = date('d.m.Y', $displayTimestamp);
+                $monthKey = date('Y-m', $displayTimestamp);
+                $entryId  = (int)$entry['id'];
                 // Sanitize content for safe HTML rendering
                 $sanitizedContent = sf_updates_sanitize_html($content);
                 ?>
-                <div class="sf-updates-item sf-card-appear">
+                <div class="sf-updates-item sf-card-appear" data-month="<?= htmlspecialchars($monthKey, ENT_QUOTES, 'UTF-8') ?>">
                     <div class="sf-updates-item-date"><?= htmlspecialchars($dateStr, ENT_QUOTES, 'UTF-8') ?></div>
                     <div class="sf-updates-item-body">
                         <?php if ($title !== ''): ?>
@@ -164,9 +217,9 @@ function sf_updates_sanitize_html(string $html): string
 
 <style>
 .sf-updates-description {
-    margin: -0.5rem 0 1.5rem;
-    color: var(--sf-muted);
-    font-size: 0.95rem;
+    margin: 0.75rem 0 1.75rem;
+    color: var(--sf-text-secondary, #4b5563);
+    font-size: 1rem;
     line-height: 1.5;
 }
 
@@ -175,6 +228,28 @@ function sf_updates_sanitize_html(string $html): string
     text-align: center;
     color: var(--sf-muted);
     font-size: 1rem;
+}
+
+.sf-updates-filter {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.sf-updates-filter-label {
+    font-size: 0.85rem;
+    color: var(--sf-muted);
+    white-space: nowrap;
+    padding-top: 5px;
+    flex-shrink: 0;
+}
+
+.sf-updates-filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .sf-updates-timeline {
@@ -368,5 +443,31 @@ function sf_updates_sanitize_html(string $html): string
             }
         }
     });
+
+    // Month filter
+    var filterBtns = document.querySelectorAll('.sf-updates-filter-btn');
+    if (filterBtns.length) {
+        filterBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var month = this.dataset.month;
+                // Toggle active state on buttons
+                filterBtns.forEach(function (b) {
+                    b.classList.remove('sf-btn-primary');
+                    b.classList.add('sf-btn-secondary');
+                });
+                this.classList.add('sf-btn-primary');
+                this.classList.remove('sf-btn-secondary');
+                // Show/hide timeline items
+                var items = document.querySelectorAll('#sfUpdatesTimeline .sf-updates-item');
+                items.forEach(function (item) {
+                    if (month === 'all' || item.dataset.month === month) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+    }
 })();
 </script>

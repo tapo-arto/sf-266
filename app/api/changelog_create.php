@@ -35,10 +35,17 @@ if (!sf_csrf_validate()) {
     exit;
 }
 
-$userId     = (int)$user['id'];
-$rawJson    = trim($_POST['translations'] ?? '');
+$userId      = (int)$user['id'];
+$rawJson     = trim($_POST['translations'] ?? '');
 $isPublished = (int)($_POST['is_published'] ?? 0) === 1 ? 1 : 0;
-$feedbackId = (int)($_POST['feedback_id'] ?? 0);
+$feedbackId  = (int)($_POST['feedback_id'] ?? 0);
+
+// Optional publish date; validate format YYYY-MM-DD
+$publishDateRaw = trim($_POST['publish_date'] ?? '');
+$publishDate    = null;
+if ($publishDateRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $publishDateRaw)) {
+    $publishDate = $publishDateRaw;
+}
 
 // Validate translations JSON
 $translations = json_decode($rawJson, true);
@@ -65,13 +72,14 @@ if (!$hasContent) {
 try {
     $db = Database::getInstance();
     $stmt = $db->prepare(
-        "INSERT INTO sf_changelog (feedback_id, translations, is_published, created_by, created_at, updated_at)
-         VALUES (:feedback_id, :translations, :is_published, :created_by, NOW(), NOW())"
+        "INSERT INTO sf_changelog (feedback_id, translations, is_published, publish_date, created_by, created_at, updated_at)
+         VALUES (:feedback_id, :translations, :is_published, :publish_date, :created_by, NOW(), NOW())"
     );
     $stmt->execute([
         ':feedback_id'  => $feedbackId > 0 ? $feedbackId : null,
         ':translations' => json_encode($translations, JSON_UNESCAPED_UNICODE),
         ':is_published' => $isPublished,
+        ':publish_date' => $publishDate,
         ':created_by'   => $userId,
     ]);
 
