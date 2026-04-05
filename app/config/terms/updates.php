@@ -143,4 +143,18 @@ return [
     'it' => 'Impossibile eliminare l\'aggiornamento.',
     'el' => 'Αποτυχία διαγραφής ενημέρωσης.',
 ],
+'updates_read_more' => [
+    'fi' => 'Lue lisää',
+    'sv' => 'Läs mer',
+    'en' => 'Read more',
+    'it' => 'Per saperne di più',
+    'el' => 'Διαβάστε περισσότερα',
+],
+'updates_close' => [
+    'fi' => 'Sulje',
+    'sv' => 'Stäng',
+    'en' => 'Close',
+    'it' => 'Chiudi',
+    'el' => 'Κλείσιμο',
+],
 ];

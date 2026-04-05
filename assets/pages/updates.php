@@ -4,6 +4,7 @@
  *
  * Lists published changelog entries newest-first.
  * Content is shown in the user's active UI language with fallback to English then Finnish.
+ * Clicking a title or the "Read more" button opens a modal with the full entry.
  */
 
 declare(strict_types=1);
@@ -58,6 +59,25 @@ function resolveTranslation(array $translations, string $lang, string $field): s
     }
     return '';
 }
+
+/**
+ * Sanitize changelog HTML content.
+ * Allows safe formatting tags and removes all attributes.
+ * Identical logic to sf_sanitize_ai_html() used on the view page.
+ * Falls back to nl2br for plain-text (no HTML tags) content.
+ */
+function sf_updates_sanitize_html(string $html): string
+{
+    // Plain-text content: convert newlines to <br> tags
+    if (strip_tags($html) === $html) {
+        return nl2br(htmlspecialchars($html, ENT_QUOTES, 'UTF-8'));
+    }
+    // HTML content: strip disallowed tags and remove all attributes
+    $allowed = '<p><br><strong><em><u><ol><ul><li><span>';
+    $html = strip_tags($html, $allowed);
+    $html = preg_replace('/<(\w+)(?:\s[^>]*)?(\/?)>/', '<$1$2>', $html);
+    return $html;
+}
 ?>
 
 <div class="sf-page-container">
@@ -85,16 +105,35 @@ function resolveTranslation(array $translations, string $lang, string $field): s
                 $title   = resolveTranslation($translations, $uiLang, 'title');
                 $content = resolveTranslation($translations, $uiLang, 'content');
                 $dateStr = date('d.m.Y', strtotime($entry['created_at']));
+                $entryId = (int)$entry['id'];
+                // Sanitize content for safe HTML rendering
+                $sanitizedContent = sf_updates_sanitize_html($content);
                 ?>
                 <div class="sf-updates-item sf-card-appear">
                     <div class="sf-updates-item-date"><?= htmlspecialchars($dateStr, ENT_QUOTES, 'UTF-8') ?></div>
                     <div class="sf-updates-item-body">
                         <?php if ($title !== ''): ?>
-                            <h2 class="sf-updates-item-title"><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?></h2>
+                            <h2 class="sf-updates-item-title">
+                                <button type="button"
+                                        class="sf-updates-title-btn"
+                                        data-entry-id="<?= $entryId ?>"
+                                        aria-haspopup="dialog">
+                                    <?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?>
+                                </button>
+                            </h2>
                         <?php endif; ?>
                         <?php if ($content !== ''): ?>
-                            <div class="sf-updates-item-content">
-                                <?= nl2br(htmlspecialchars($content, ENT_QUOTES, 'UTF-8')) ?>
+                            <button type="button"
+                                    class="sf-btn sf-btn-small sf-btn-secondary sf-updates-read-more"
+                                    data-entry-id="<?= $entryId ?>"
+                                    aria-haspopup="dialog">
+                                <?= htmlspecialchars(sf_term('updates_read_more', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+                            </button>
+                            <!-- Hidden content rendered server-side for safe injection into modal -->
+                            <div id="sf-update-content-<?= $entryId ?>"
+                                 class="sf-updates-hidden-content"
+                                 aria-hidden="true">
+                                <?= $sanitizedContent ?>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -102,6 +141,22 @@ function resolveTranslation(array $translations, string $lang, string $field): s
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+</div>
+
+<!-- Detail Modal -->
+<div id="sfUpdateDetailModal" class="sf-modal hidden" role="dialog" aria-modal="true" aria-labelledby="sfUpdateDetailModalTitle">
+    <div class="sf-modal-content sf-updates-modal-content">
+        <div class="sf-modal-header">
+            <h3 id="sfUpdateDetailModalTitle" class="sf-updates-modal-title"></h3>
+            <button type="button" class="sf-modal-close-btn" data-modal-close aria-label="<?= htmlspecialchars(sf_term('updates_close', $uiLang), ENT_QUOTES, 'UTF-8') ?>">×</button>
+        </div>
+        <div class="sf-modal-body sf-updates-modal-body" id="sfUpdateDetailModalBody"></div>
+        <div class="sf-modal-actions">
+            <button type="button" class="sf-btn sf-btn-secondary" data-modal-close>
+                <?= htmlspecialchars(sf_term('updates_close', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -170,20 +225,81 @@ function resolveTranslation(array $translations, string $lang, string $field): s
     padding: 18px 22px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     margin-left: 12px;
+    text-align: left;
 }
 
 .sf-updates-item-title {
     font-size: 1.05rem;
     font-weight: 600;
-    margin: 0 0 10px;
+    margin: 0 0 12px;
     color: var(--sf-text, #111827);
+    text-align: left;
 }
 
-.sf-updates-item-content {
+.sf-updates-title-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.15s;
+    font-family: inherit;
+    line-height: inherit;
+}
+
+.sf-updates-title-btn:hover,
+.sf-updates-title-btn:focus-visible {
+    text-decoration-color: currentColor;
+    outline: none;
+}
+
+.sf-updates-hidden-content {
+    display: none;
+}
+
+/* Modal content formatting */
+.sf-updates-modal-content {
+    max-width: 640px;
+    width: 100%;
+}
+
+.sf-updates-modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--sf-text, #111827);
+    margin: 0;
+    text-align: left;
+}
+
+.sf-updates-modal-body {
     font-size: 0.93rem;
     color: var(--sf-text, #111827);
-    line-height: 1.6;
-    white-space: pre-wrap;
+    line-height: 1.7;
+    text-align: left;
+}
+
+.sf-updates-modal-body p {
+    margin: 0 0 0.75em;
+}
+
+.sf-updates-modal-body p:last-child {
+    margin-bottom: 0;
+}
+
+.sf-updates-modal-body ul,
+.sf-updates-modal-body ol {
+    margin: 0 0 0.75em;
+    padding-left: 1.5em;
+}
+
+.sf-updates-modal-body li {
+    margin-bottom: 0.25em;
 }
 
 @media (max-width: 600px) {
@@ -208,3 +324,41 @@ function resolveTranslation(array $translations, string $lang, string $field): s
     }
 }
 </style>
+
+<script>
+(function () {
+    var modal = document.getElementById('sfUpdateDetailModal');
+    var modalTitle = document.getElementById('sfUpdateDetailModalTitle');
+    var modalBody = document.getElementById('sfUpdateDetailModalBody');
+
+    function openUpdateModal(entryId) {
+        var titleBtn = document.querySelector('.sf-updates-title-btn[data-entry-id="' + entryId + '"]');
+        var contentEl = document.getElementById('sf-update-content-' + entryId);
+
+        if (modalTitle) {
+            modalTitle.textContent = titleBtn ? titleBtn.textContent.trim() : '';
+        }
+        if (modalBody && contentEl) {
+            modalBody.innerHTML = contentEl.innerHTML;
+        }
+
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.classList.add('sf-modal-open');
+            var closeBtn = modal.querySelector('.sf-modal-close-btn');
+            if (closeBtn) closeBtn.focus({ preventScroll: true });
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        var trigger = e.target.closest('.sf-updates-title-btn, .sf-updates-read-more');
+        if (trigger) {
+            e.preventDefault();
+            var entryId = parseInt(trigger.dataset.entryId, 10);
+            if (entryId > 0) {
+                openUpdateModal(entryId);
+            }
+        }
+    });
+})();
+</script>
