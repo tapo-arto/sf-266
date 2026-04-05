@@ -2,7 +2,21 @@
 (function () {
     'use strict';
 
+    // -------------------------------------------------------
+    // Injury Heatmap – module-level state
+    // -------------------------------------------------------
+    var injuryData        = null;  // latest API response
+    var activeBpFilter    = null;  // svg_id of selected body part
+    var currentTimeParams = {};    // mirror of the stats time filter params
+
+    // i18n strings injected by PHP
+    var I18N = (typeof window.SF_INJURY_I18N === 'object' && window.SF_INJURY_I18N)
+        ? window.SF_INJURY_I18N
+        : { empty: 'No injuries', noMatch: 'No cases', activeFilter: 'Filtered:' };
+
+    // -------------------------------------------------------
     // Time filter functionality
+    // -------------------------------------------------------
     function initTimeFilter() {
         const filterButtons = document.querySelectorAll('.sf-time-filter-btn');
         const monthSelect = document.getElementById('sf-filter-month');
@@ -51,7 +65,10 @@
                 }
 
                 // Fetch stats using period
-                fetchStats({ period: period });
+                var timeParams = { period: period };
+                fetchStats(timeParams);
+                currentTimeParams = timeParams;
+                fetchInjuryData(Object.assign({}, currentTimeParams, { site: getSiteFilterValue() }));
             });
         });
 
@@ -74,7 +91,10 @@
 
                 // If both month and year are selected, or just year
                 if (month || year) {
-                    fetchStats({ month: month, year: year });
+                    var timeParams = { month: month, year: year };
+                    fetchStats(timeParams);
+                    currentTimeParams = timeParams;
+                    fetchInjuryData(Object.assign({}, currentTimeParams, { site: getSiteFilterValue() }));
                 }
             });
         }
@@ -88,8 +108,10 @@
                 const year = this.value;
                 const month = monthSelect ? monthSelect.value : '';
 
-                // Fetch with month and year parameters
-                fetchStats({ month: month, year: year });
+                var timeParams = { month: month, year: year };
+                fetchStats(timeParams);
+                currentTimeParams = timeParams;
+                fetchInjuryData(Object.assign({}, currentTimeParams, { site: getSiteFilterValue() }));
             });
         }
 
@@ -218,6 +240,316 @@
         });
     }
 
+    // -------------------------------------------------------
+    // Injury Heatmap
+    // -------------------------------------------------------
+
+    /** Return the currently selected worksite from the injury site dropdown */
+    function getSiteFilterValue() {
+        var sel = document.getElementById('sf-injury-site-filter');
+        return sel ? sel.value : '';
+    }
+
+    /** Fetch injury heatmap data from the API */
+    function fetchInjuryData(params) {
+        var card = document.getElementById('sf-injury-card');
+        if (card) {
+            card.style.opacity = '0.6';
+            card.style.pointerEvents = 'none';
+        }
+
+        var qp = new URLSearchParams();
+        if (params.period) qp.set('period', params.period);
+        if (params.month)  qp.set('month',  params.month);
+        if (params.year)   qp.set('year',   params.year);
+        if (params.site)   qp.set('site',   params.site);
+
+        var baseUrl = (window.SF_BASE_URL || '').replace(/\/$/, '');
+        fetch(baseUrl + '/app/api/injury-heatmap.php?' + qp.toString())
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                injuryData = data;
+                applyHeatmap(data.bodyPartCounts);
+                renderInjuryChart(data.bodyPartCounts);
+                renderInjuryList(data.recentFlashes, activeBpFilter);
+                updateSiteDropdown(data.sites);
+                if (card) {
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
+                }
+            })
+            .catch(function () {
+                if (card) {
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
+                }
+            });
+    }
+
+    /** Keep the worksite dropdown options current (add new sites, don't remove existing) */
+    function updateSiteDropdown(sites) {
+        var sel = document.getElementById('sf-injury-site-filter');
+        if (!sel || !sites) return;
+        var existing = Array.from(sel.options).map(function (o) { return o.value; });
+        sites.forEach(function (site) {
+            if (!existing.includes(site)) {
+                var opt = document.createElement('option');
+                opt.value       = site;
+                opt.textContent = site;
+                sel.appendChild(opt);
+            }
+        });
+    }
+
+    /**
+     * Returns the CSS fill colour for a heatmap body part.
+     * intensity: 0–1 (count / maxCount)
+     */
+    function getHeatmapColor(intensity, count) {
+        if (count === 0) return '#e5e7eb';
+        if (intensity <= 0.25) return '#fde68a';
+        if (intensity <= 0.5)  return '#fca5a5';
+        if (intensity <= 0.75) return '#f87171';
+        return '#dc2626';
+    }
+
+    /** Apply heatmap colours to both SVG figures */
+    function applyHeatmap(bodyPartCounts) {
+        if (!bodyPartCounts) return;
+        var maxCount = bodyPartCounts.reduce(function (m, bp) { return Math.max(m, bp.count); }, 1);
+
+        ['sf-heatmap-svg-front', 'sf-heatmap-svg-back'].forEach(function (svgId) {
+            var svgEl = document.getElementById(svgId);
+            if (!svgEl) return;
+
+            // Reset all parts to default first
+            svgEl.querySelectorAll('[id^="bp-"]').forEach(function (el) {
+                el.style.fill = '#e5e7eb';
+            });
+
+            // Apply counts
+            bodyPartCounts.forEach(function (bp) {
+                // Front SVG uses exact id; back SVG uses id + '-back'
+                var id = (svgId === 'sf-heatmap-svg-back') ? bp.svg_id + '-back' : bp.svg_id;
+                // Also try the exact id for back SVG (some parts like upper-back only exist in back SVG)
+                var el = svgEl.querySelector('#' + CSS.escape(id))
+                      || svgEl.querySelector('#' + CSS.escape(bp.svg_id));
+                if (el) {
+                    el.style.fill = getHeatmapColor(bp.count / maxCount, bp.count);
+                }
+            });
+        });
+    }
+
+    /** Render horizontal bar chart for body-part categories */
+    function renderInjuryChart(bodyPartCounts) {
+        var container = document.getElementById('sf-injury-chart');
+        if (!container || !bodyPartCounts) return;
+
+        // Group by category
+        var categories = {};
+        bodyPartCounts.forEach(function (bp) {
+            if (!categories[bp.category]) categories[bp.category] = 0;
+            categories[bp.category] += bp.count;
+        });
+
+        var maxCat = Object.values(categories).reduce(function (m, v) { return Math.max(m, v); }, 1);
+
+        container.innerHTML = '';
+        Object.entries(categories).forEach(function (entry) {
+            var cat   = entry[0];
+            var count = entry[1];
+            var barWidth = Math.round((count / maxCat) * 100);
+
+            var row = document.createElement('div');
+            row.className = 'sf-injury-chart-row';
+            row.innerHTML =
+                '<span class="sf-injury-chart-label">' + escapeHtml(cat) + '</span>' +
+                '<div class="sf-injury-chart-bar-wrap">' +
+                    '<div class="sf-injury-chart-bar" style="--bar-width: ' + barWidth + '%;">' +
+                        '<span class="sf-injury-chart-count">' + count + '</span>' +
+                    '</div>' +
+                '</div>';
+            container.appendChild(row);
+        });
+    }
+
+    /** Render (or re-render) the flash list, optionally filtered by body part */
+    function renderInjuryList(recentFlashes, filterBpId) {
+        var container = document.getElementById('sf-injury-flash-list');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        var list = filterBpId
+            ? (recentFlashes || []).filter(function (f) {
+                return f.body_parts && f.body_parts.indexOf(filterBpId) !== -1;
+              })
+            : (recentFlashes || []);
+
+        if (list.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'sf-pending-empty';
+            empty.innerHTML = '<span>' + escapeHtml(filterBpId ? I18N.noMatch : I18N.empty) + '</span>';
+            container.appendChild(empty);
+            return;
+        }
+
+        var baseUrl = (window.SF_BASE_URL || '').replace(/\/$/, '');
+
+        list.forEach(function (flash) {
+            var item       = document.createElement('a');
+            item.href      = baseUrl + '/index.php?page=view&id=' + encodeURIComponent(flash.id);
+            item.className = 'sf-recent-compact-item';
+
+            var timeStr = flash.updated_at ? jsTimeAgo(flash.updated_at) : '';
+
+            item.innerHTML =
+                '<span class="sf-type-dot sf-type-dot--' + escapeHtml(flash.type) + '"></span>' +
+                '<div class="sf-recent-compact-content">' +
+                    '<div class="sf-recent-compact-title">' + escapeHtml(flash.title) + '</div>' +
+                    '<div class="sf-recent-compact-meta">' +
+                        (flash.site ? '<span>' + escapeHtml(flash.site) + '</span><span>·</span>' : '') +
+                        '<span class="sf-recent-compact-time">' + escapeHtml(timeStr) + '</span>' +
+                    '</div>' +
+                '</div>';
+
+            container.appendChild(item);
+        });
+    }
+
+    /** Highlight a single body part across both SVG figures */
+    function highlightBp(partId) {
+        ['sf-heatmap-svg-front', 'sf-heatmap-svg-back'].forEach(function (svgId) {
+            var svgEl = document.getElementById(svgId);
+            if (!svgEl) return;
+
+            svgEl.querySelectorAll('.sf-bp-active').forEach(function (el) {
+                el.classList.remove('sf-bp-active');
+            });
+
+            // Try canonical id and back-suffixed id
+            [partId, partId + '-back'].forEach(function (id) {
+                var el = svgEl.querySelector('#' + CSS.escape(id));
+                if (el) el.classList.add('sf-bp-active');
+            });
+        });
+    }
+
+    /** Remove all active highlights */
+    function clearBpHighlight() {
+        document.querySelectorAll('#sf-heatmap-svg-front .sf-bp-active, #sf-heatmap-svg-back .sf-bp-active')
+            .forEach(function (el) { el.classList.remove('sf-bp-active'); });
+    }
+
+    /** Update the active-filter badge */
+    function updateActiveFilterBadge(partId) {
+        var badge = document.getElementById('sf-injury-active-filter');
+        if (!badge) return;
+
+        if (!partId || !injuryData) {
+            badge.style.display = 'none';
+            badge.textContent   = '';
+            return;
+        }
+
+        var bp   = (injuryData.bodyPartCounts || []).find(function (b) { return b.svg_id === partId; });
+        var name = bp ? bp.name : partId;
+        badge.textContent = I18N.activeFilter + ' ' + name;
+        badge.style.display = 'inline';
+    }
+
+    /** Normalise a body-part element id to the canonical (front) id */
+    function canonicalBpId(rawId) {
+        return rawId.endsWith('-back') ? rawId.slice(0, -5) : rawId;
+    }
+
+    /** Initialise injury heatmap interactions */
+    function initInjuryHeatmap() {
+        // Bootstrap with server-side data
+        if (typeof window.SF_INJURY_INITIAL_DATA === 'object' && window.SF_INJURY_INITIAL_DATA) {
+            injuryData = window.SF_INJURY_INITIAL_DATA;
+            applyHeatmap(injuryData.bodyPartCounts);
+            renderInjuryChart(injuryData.bodyPartCounts);
+            renderInjuryList(injuryData.recentFlashes, null);
+        }
+
+        // SVG click handlers (both front and back)
+        ['sf-heatmap-svg-front', 'sf-heatmap-svg-back'].forEach(function (svgId) {
+            var svgEl = document.getElementById(svgId);
+            if (!svgEl) return;
+
+            svgEl.addEventListener('click', function (e) {
+                var target = e.target.closest('[id^="bp-"]');
+
+                if (!target) {
+                    // Click on empty area – clear filter
+                    if (activeBpFilter) {
+                        activeBpFilter = null;
+                        clearBpHighlight();
+                        renderInjuryList(injuryData ? injuryData.recentFlashes : [], null);
+                        updateActiveFilterBadge(null);
+                    }
+                    return;
+                }
+
+                var partId = canonicalBpId(target.id);
+
+                if (activeBpFilter === partId) {
+                    // Toggle off
+                    activeBpFilter = null;
+                    clearBpHighlight();
+                    renderInjuryList(injuryData ? injuryData.recentFlashes : [], null);
+                    updateActiveFilterBadge(null);
+                } else {
+                    activeBpFilter = partId;
+                    highlightBp(partId);
+                    renderInjuryList(injuryData ? injuryData.recentFlashes : [], partId);
+                    updateActiveFilterBadge(partId);
+                }
+            });
+        });
+
+        // Click on the active-filter badge clears the filter
+        var badge = document.getElementById('sf-injury-active-filter');
+        if (badge) {
+            badge.addEventListener('click', function () {
+                activeBpFilter = null;
+                clearBpHighlight();
+                renderInjuryList(injuryData ? injuryData.recentFlashes : [], null);
+                updateActiveFilterBadge(null);
+            });
+        }
+
+        // Worksite dropdown change
+        var siteFilter = document.getElementById('sf-injury-site-filter');
+        if (siteFilter) {
+            siteFilter.addEventListener('change', function () {
+                fetchInjuryData(Object.assign({}, currentTimeParams, { site: this.value }));
+            });
+        }
+    }
+
+    // -------------------------------------------------------
+    // Simple JS time-ago (fallback for dynamically rendered items)
+    // -------------------------------------------------------
+    function jsTimeAgo(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr.replace(' ', 'T'));
+        if (isNaN(d.getTime())) return dateStr;
+        var diffMs   = Date.now() - d.getTime();
+        var diffDays = Math.floor(diffMs / 86400000);
+        if (diffDays === 0) return I18N.today     || '';
+        if (diffDays === 1) return I18N.yesterday || '';
+        if (diffDays < 30) {
+            var tpl = I18N.daysAgo || '{n}';
+            return tpl.replace('{n}', diffDays);
+        }
+        var months = Math.floor(diffDays / 30);
+        if (months < 12) return months + ' kk';
+        return Math.floor(months / 12) + ' v';
+    }
+
     // Escape HTML to prevent XSS
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -230,9 +562,11 @@
         document.addEventListener('DOMContentLoaded', function () {
             initTimeFilter();
             initWorksiteToggle();
+            initInjuryHeatmap();
         });
     } else {
         initTimeFilter();
         initWorksiteToggle();
+        initInjuryHeatmap();
     }
 })();

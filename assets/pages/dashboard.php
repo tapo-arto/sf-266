@@ -108,19 +108,131 @@ try {
     $archivedCount = (int)($stmt->fetchColumn() ?: 0);
 } catch (Throwable $e) {}
 
-// --- Recent Publications (5 items) ---
-$recentItems = [];
+// --- Injury Heatmap: helper to load and sanitise a body-map SVG ---
+function dashboardLoadBodySvg(string $svgFile): string
+{
+    $expectedDir = realpath(__DIR__ . '/../../assets/img/body-map');
+    $realFile    = realpath($svgFile);
+    if (
+        $realFile === false || $expectedDir === false
+        || strncmp($realFile, $expectedDir . DIRECTORY_SEPARATOR, strlen($expectedDir) + 1) !== 0
+    ) {
+        return '';
+    }
+    $raw = file_get_contents($realFile);
+    if ($raw === false || $raw === '') {
+        return '';
+    }
+    $raw = preg_replace('/<\?xml[^?]*\?>\s*/', '', $raw);
+    if (!preg_match('/<svg[^>]*>(.*?)<\/svg>/s', $raw, $cm)) {
+        return '';
+    }
+    $inner = trim($cm[1]);
+    $inner = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $inner);
+    $inner = preg_replace('/\s+on\w+="[^"]*"/i', '', $inner);
+    $inner = preg_replace('/\s+on\w+=\'[^\']*\'/i', '', $inner);
+    $inner = preg_replace('/\s+on\w+=\S+/i', '', $inner);
+    $inner = preg_replace('/href\s*=\s*["\']?\s*javascript:[^"\'>\s]*/i', '', $inner);
+    $inner = preg_replace('/\s+fill="[^"]*"/', '', $inner);
+    $inner = preg_replace('/\s+stroke="[^"]*"/', '', $inner);
+    $inner = preg_replace('/\s+stroke-width="[^"]*"/', '', $inner);
+    return $inner;
+}
+
+// --- Injury Heatmap: initial body-part counts (all time, all sites) ---
+$injuryBodyParts = [];
 try {
     $stmt = $pdo->prepare("
-        SELECT id, type, title, title_short, site, updated_at 
-        FROM sf_flashes 
-        WHERE state = 'published' 
-        ORDER BY updated_at DESC 
-        LIMIT 5
+        SELECT
+            bp.svg_id,
+            bp.name,
+            bp.category,
+            COUNT(DISTINCT COALESCE(f.translation_group_id, f.id)) AS cnt
+        FROM body_parts bp
+        LEFT JOIN incident_body_part ibp ON ibp.body_part_id = bp.id
+        LEFT JOIN sf_flashes f
+            ON  f.id    = ibp.incident_id
+            AND f.state = 'published'
+        GROUP BY bp.id, bp.svg_id, bp.name, bp.category
+        ORDER BY bp.sort_order
     ");
     $stmt->execute();
-    $recentItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $injuryBodyParts[] = [
+            'svg_id'   => $row['svg_id'],
+            'name'     => $row['name'],
+            'category' => $row['category'],
+            'count'    => (int)$row['cnt'],
+        ];
+    }
 } catch (Throwable $e) {}
+
+// --- Injury Heatmap: worksites that have injury data ---
+$injurySites = [];
+try {
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT f.site
+        FROM   sf_flashes f
+        INNER JOIN incident_body_part ibp ON ibp.incident_id = f.id
+        WHERE  f.state = 'published'
+          AND  f.site IS NOT NULL
+          AND  f.site <> ''
+        ORDER BY f.site ASC
+    ");
+    $stmt->execute();
+    $injurySites = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'site');
+} catch (Throwable $e) {}
+
+// --- Injury Heatmap: recent flashes with at least one injury annotation ---
+$injuryRecentFlashes = [];
+try {
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT
+            f.id,
+            f.type,
+            COALESCE(NULLIF(f.title_short, ''), f.title) AS title,
+            f.site,
+            f.updated_at
+        FROM sf_flashes f
+        INNER JOIN incident_body_part ibp ON ibp.incident_id = f.id
+        WHERE f.state = 'published'
+        ORDER BY f.updated_at DESC
+        LIMIT 15
+    ");
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!empty($rows)) {
+        $ids          = array_map(static fn($r) => (int)$r['id'], $rows);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $bpStmt       = $pdo->prepare("
+            SELECT ibp.incident_id, bp.svg_id
+            FROM   incident_body_part ibp
+            INNER JOIN body_parts bp ON bp.id = ibp.body_part_id
+            WHERE  ibp.incident_id IN ($placeholders)
+        ");
+        $bpStmt->execute($ids);
+        $bpMap = [];
+        foreach ($bpStmt->fetchAll(PDO::FETCH_ASSOC) as $bpRow) {
+            $bpMap[(int)$bpRow['incident_id']][] = $bpRow['svg_id'];
+        }
+        foreach ($rows as $row) {
+            $fid                   = (int)$row['id'];
+            $injuryRecentFlashes[] = [
+                'id'         => $fid,
+                'type'       => $row['type']       ?? '',
+                'title'      => $row['title']      ?? '',
+                'site'       => $row['site']       ?? '',
+                'updated_at' => $row['updated_at'] ?? '',
+                'body_parts' => $bpMap[$fid]       ?? [],
+            ];
+        }
+    }
+} catch (Throwable $e) {}
+
+// Load SVG inner content for the heatmap figures
+$bpDir          = __DIR__ . '/../../assets/img/body-map/';
+$heatmapFrontSvg = dashboardLoadBodySvg($bpDir . 'front.svg');
+$heatmapBackSvg  = dashboardLoadBodySvg($bpDir . 'back.svg');
 
 // --- Waiting for You (items relevant to current user) ---
 $waitingItems = [];
@@ -374,52 +486,54 @@ try {
                 </div>
             </div>
 
-            <!-- Recent (Compact) -->
-            <div class="sf-content-card">
-                <div class="sf-section-header">
+            <!-- Injury Heatmap (replaces Recent) -->
+            <div class="sf-content-card sf-injury-card" id="sf-injury-card">
+                <div class="sf-section-header sf-section-header--wrap">
                     <span class="sf-section-icon">
-                        <img src="<?= htmlspecialchars($baseUrl) ?>/assets/img/icons/recent.svg" alt="" style="width: 1.25rem; height: 1.25rem;">
+                        <img src="<?= htmlspecialchars($baseUrl) ?>/assets/img/icons/injury_icon.svg" alt="" style="width: 1.25rem; height: 1.25rem;">
                     </span>
-                    <span class="sf-section-title"><?= htmlspecialchars(sf_term('dashboard_recent', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="sf-section-title"><?= htmlspecialchars(sf_term('dashboard_injury_title', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                    <div class="sf-injury-site-wrap">
+                        <select id="sf-injury-site-filter" class="sf-filter-select sf-filter-select--sm" aria-label="<?= htmlspecialchars(sf_term('dashboard_injury_all_sites', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                            <option value=""><?= htmlspecialchars(sf_term('dashboard_injury_all_sites', $uiLang), ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php foreach ($injurySites as $injurySite): ?>
+                                <option value="<?= htmlspecialchars($injurySite, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($injurySite, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
 
-                <?php if (empty($recentItems)): ?>
-                    <div class="sf-pending-empty">
-                        <img src="<?= htmlspecialchars($baseUrl) ?>/assets/img/icons/recent.svg" alt="" style="width: 2rem; height: 2rem; opacity: 0.4;">
-                        <span><?= htmlspecialchars(sf_term('dashboard_recent_empty', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                <div class="sf-injury-layout">
+                    <!-- Left: SVG Body Figures (front + back) -->
+                    <div class="sf-injury-svg-col">
+                        <svg class="sf-heatmap-body-svg" id="sf-heatmap-svg-front"
+                             viewBox="0 0 261.58 620.34" xmlns="http://www.w3.org/2000/svg"
+                             role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_front_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                            <?= $heatmapFrontSvg ?>
+                        </svg>
+                        <svg class="sf-heatmap-body-svg sf-heatmap-body-svg--back" id="sf-heatmap-svg-back"
+                             viewBox="0 0 261.58 597.52" xmlns="http://www.w3.org/2000/svg"
+                             role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_back_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                            <?= $heatmapBackSvg ?>
+                        </svg>
+                        <p class="sf-injury-svg-hint"><?= htmlspecialchars(sf_term('dashboard_injury_click_hint', $uiLang), ENT_QUOTES, 'UTF-8') ?></p>
                     </div>
-                <?php else: ?>
-                    <div class="sf-recent-compact-list">
-                        <?php foreach ($recentItems as $item): 
-                            $itemTitle = !empty($item['title_short']) ? $item['title_short'] : $item['title'];
-                            $itemType = $item['type'] ?? '';
-                            $itemId = (int)($item['id'] ?? 0);
-                            $itemSite = $item['site'] ?? '';
-                            $itemTime = $item['updated_at'] ?? '';
-                        ?>
-                            <a href="<?= htmlspecialchars($baseUrl) ?>/index.php?page=view&id=<?= $itemId ?>" class="sf-recent-compact-item">
-                                <span class="sf-type-dot sf-type-dot--<?= htmlspecialchars($itemType) ?>"></span>
-                                <div class="sf-recent-compact-content">
-                                    <div class="sf-recent-compact-title"><?= htmlspecialchars($itemTitle, ENT_QUOTES, 'UTF-8') ?></div>
-                                    <div class="sf-recent-compact-meta">
-                                        <?php if (!empty($itemSite)): ?>
-                                            <span><?= htmlspecialchars($itemSite, ENT_QUOTES, 'UTF-8') ?></span>
-                                            <span>·</span>
-                                        <?php endif; ?>
-                                        <?php if (!empty($itemTime)): ?>
-                                            <span class="sf-recent-compact-time"><?= htmlspecialchars(sf_time_ago($itemTime, $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
 
-                <div style="margin-top: 1rem; text-align: center;">
-                    <a href="<?= htmlspecialchars($baseUrl) ?>/index.php?page=list" class="sf-show-all-link">
-                        <?= htmlspecialchars(sf_term('dashboard_show_all', $uiLang), ENT_QUOTES, 'UTF-8') ?>
-                    </a>
+                    <!-- Right: Chart + List -->
+                    <div class="sf-injury-data-col">
+                        <div class="sf-injury-chart-section">
+                            <h4 class="sf-injury-section-label"><?= htmlspecialchars(sf_term('dashboard_injury_chart_title', $uiLang), ENT_QUOTES, 'UTF-8') ?></h4>
+                            <div id="sf-injury-chart" class="sf-injury-chart"></div>
+                        </div>
+
+                        <div class="sf-injury-list-section">
+                            <div class="sf-injury-list-header">
+                                <h4 class="sf-injury-section-label"><?= htmlspecialchars(sf_term('dashboard_injury_recent_title', $uiLang), ENT_QUOTES, 'UTF-8') ?></h4>
+                                <span class="sf-injury-active-filter" id="sf-injury-active-filter"></span>
+                            </div>
+                            <div class="sf-recent-compact-list" id="sf-injury-flash-list"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -427,3 +541,19 @@ try {
 
     </div>
 </div>
+
+<script>
+window.SF_INJURY_INITIAL_DATA = <?= json_encode([
+    'bodyPartCounts' => $injuryBodyParts,
+    'recentFlashes'  => $injuryRecentFlashes,
+    'sites'          => $injurySites,
+], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+window.SF_INJURY_I18N = {
+    empty:         <?= json_encode(sf_term('dashboard_injury_empty', $uiLang),          JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    noMatch:       <?= json_encode(sf_term('dashboard_injury_no_match', $uiLang),       JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    activeFilter:  <?= json_encode(sf_term('dashboard_injury_active_filter', $uiLang),  JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    today:         <?= json_encode(sf_term('time_ago_today', $uiLang),                  JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    yesterday:     <?= json_encode(sf_term('time_ago_yesterday', $uiLang),              JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    daysAgo:       <?= json_encode(sf_term('time_ago_days', $uiLang),                   JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+};
+</script>

@@ -1168,3 +1168,239 @@
         overflow: hidden;
     }
 }
+/* ============================================
+   INJURY HEATMAP MODULE
+   ============================================ */
+
+.sf-injury-card {
+    overflow: visible;
+}
+
+/* Section header flex-wrap for the site filter */
+.sf-section-header--wrap {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+}
+
+.sf-injury-site-wrap {
+    margin-left: auto;
+}
+
+.sf-filter-select--sm {
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.5rem;
+    height: auto;
+    min-width: 9rem;
+}
+
+/* Two-column layout: SVG figures | chart + list */
+.sf-injury-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.25rem;
+    margin-top: 0.75rem;
+    align-items: start;
+}
+
+/* SVG column */
+.sf-injury-svg-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.sf-heatmap-body-svg {
+    width: 80px;
+    height: auto;
+    cursor: pointer;
+    display: block;
+}
+
+/* Body-part paths in heatmap mode */
+.sf-heatmap-body-svg [id^="bp-"] {
+    fill: #e5e7eb;
+    transition: fill 0.3s ease, opacity 0.15s ease, stroke 0.15s ease;
+    cursor: pointer;
+}
+
+.sf-heatmap-body-svg [id^="bp-"]:hover {
+    opacity: 0.75;
+    stroke: #6b7280;
+    stroke-width: 2px;
+}
+
+.sf-heatmap-body-svg [id^="bp-"].sf-bp-active {
+    stroke: #1d4ed8;
+    stroke-width: 3px;
+    opacity: 1;
+}
+
+/* Paths without a body-part id (background/outline shapes) */
+.sf-heatmap-body-svg path:not([id^="bp-"]) {
+    fill: #f3f4f6;
+    pointer-events: none;
+}
+
+.sf-injury-svg-hint {
+    font-size: 0.6875rem;
+    color: #9ca3af;
+    text-align: center;
+    margin: 0.25rem 0 0;
+    line-height: 1.3;
+    max-width: 80px;
+}
+
+/* Data column */
+.sf-injury-data-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+}
+
+/* Chart section */
+.sf-injury-chart-section {
+    /* inherits sf-injury-data-col flow */
+}
+
+.sf-injury-section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 0.5rem;
+}
+
+.sf-injury-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.sf-injury-chart-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sf-injury-chart-label {
+    font-size: 0.75rem;
+    color: #374151;
+    width: 7rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sf-injury-chart-bar-wrap {
+    flex: 1;
+    height: 1.125rem;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.sf-injury-chart-bar {
+    height: 100%;
+    min-width: 1.5rem;
+    width: var(--bar-width, 0%);
+    background: linear-gradient(90deg, #f97316, #dc2626);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.3rem;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sf-injury-chart-count {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1;
+}
+
+/* List section */
+.sf-injury-list-section {
+    /* inherits sf-injury-data-col flow */
+}
+
+.sf-injury-list-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+}
+
+.sf-injury-active-filter {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    background: #1d4ed8;
+    border-radius: 12px;
+    padding: 0.1rem 0.6rem;
+    display: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.sf-injury-active-filter:hover {
+    background: #1e40af;
+}
+
+/* Heatmap colour legend */
+.sf-heatmap-legend {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+    margin-top: 0.25rem;
+}
+
+.sf-heatmap-legend-grad {
+    width: 60px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #e5e7eb, #fde68a, #f97316, #dc2626);
+    flex-shrink: 0;
+}
+
+.sf-heatmap-legend-label {
+    font-size: 0.6rem;
+    color: #9ca3af;
+}
+
+/* ============================================
+   RESPONSIVE – INJURY HEATMAP
+   ============================================ */
+
+@media (max-width: 1024px) {
+    .sf-injury-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .sf-injury-svg-col {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .sf-heatmap-body-svg {
+        width: 70px;
+    }
+
+    .sf-injury-svg-hint {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .sf-heatmap-body-svg {
+        width: 60px;
+    }
+}
