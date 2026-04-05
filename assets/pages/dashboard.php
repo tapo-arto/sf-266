@@ -506,17 +506,22 @@ try {
                 <div class="sf-injury-layout">
                     <!-- Left: SVG Body Figures (front + back) -->
                     <div class="sf-injury-svg-col">
-                        <svg class="sf-heatmap-body-svg" id="sf-heatmap-svg-front"
-                             viewBox="0 0 261.58 620.34" xmlns="http://www.w3.org/2000/svg"
-                             role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_front_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
-                            <?= $heatmapFrontSvg ?>
-                        </svg>
-                        <svg class="sf-heatmap-body-svg sf-heatmap-body-svg--back" id="sf-heatmap-svg-back"
-                             viewBox="0 0 261.58 597.52" xmlns="http://www.w3.org/2000/svg"
-                             role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_back_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
-                            <?= $heatmapBackSvg ?>
-                        </svg>
-                        <p class="sf-injury-svg-hint"><?= htmlspecialchars(sf_term('dashboard_injury_click_hint', $uiLang), ENT_QUOTES, 'UTF-8') ?></p>
+                        <p class="sf-injury-svg-hint">
+                            <span class="sf-injury-svg-hint-icon" aria-hidden="true">ℹ</span>
+                            <?= htmlspecialchars(sf_term('dashboard_injury_click_hint', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+                        </p>
+                        <div class="sf-injury-svg-figures">
+                            <svg class="sf-heatmap-body-svg" id="sf-heatmap-svg-front"
+                                 viewBox="0 0 261.58 620.34" xmlns="http://www.w3.org/2000/svg"
+                                 role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_front_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                                <?= $heatmapFrontSvg ?>
+                            </svg>
+                            <svg class="sf-heatmap-body-svg sf-heatmap-body-svg--back" id="sf-heatmap-svg-back"
+                                 viewBox="0 0 261.58 597.52" xmlns="http://www.w3.org/2000/svg"
+                                 role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_back_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                                <?= $heatmapBackSvg ?>
+                            </svg>
+                        </div>
                     </div>
 
                     <!-- Right: Chart + List -->

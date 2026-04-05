@@ -1208,12 +1208,21 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
     flex-shrink: 0;
 }
 
+/* Figures wrapper – front + back side by side */
+.sf-injury-svg-figures {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: flex-start;
+    justify-content: center;
+}
+
 .sf-heatmap-body-svg {
-    width: 80px;
+    width: 90px;
     height: auto;
     cursor: pointer;
     display: block;
@@ -1246,11 +1255,22 @@
 
 .sf-injury-svg-hint {
     font-size: 0.6875rem;
-    color: #9ca3af;
+    color: #6b7280;
+    font-style: italic;
     text-align: center;
-    margin: 0.25rem 0 0;
-    line-height: 1.3;
-    max-width: 80px;
+    margin: 0;
+    line-height: 1.4;
+    max-width: 200px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.sf-injury-svg-hint-icon {
+    font-style: normal;
+    color: #9ca3af;
+    flex-shrink: 0;
+    font-size: 0.75rem;
 }
 
 /* Data column */
@@ -1318,11 +1338,26 @@
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Zero-value bars: neutral grey, no min-width */
+.sf-injury-chart-bar--zero {
+    background: #e5e7eb;
+    min-width: 0;
+}
+
+.sf-injury-chart-label--zero {
+    color: #9ca3af;
+}
+
 .sf-injury-chart-count {
     font-size: 0.6875rem;
     font-weight: 600;
     color: #fff;
     line-height: 1;
+}
+
+.sf-injury-chart-bar--zero .sf-injury-chart-count {
+    color: #6b7280;
+    padding-right: 0.25rem;
 }
 
 /* List section */
@@ -1353,7 +1388,31 @@
     background: #1e40af;
 }
 
-/* Heatmap colour legend */
+/* Injury flash list item – hover lift + coloured left border */
+.sf-injury-flash-item {
+    border-left: 3px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.sf-injury-flash-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: #f9fafb;
+}
+
+.sf-injury-flash-item[data-flash-type="red"] {
+    border-left-color: #dc2626;
+}
+
+.sf-injury-flash-item[data-flash-type="yellow"] {
+    border-left-color: #eab308;
+}
+
+.sf-injury-flash-item[data-flash-type="green"] {
+    border-left-color: #22c55e;
+}
+
+
 .sf-heatmap-legend {
     display: flex;
     gap: 0.25rem;
@@ -1384,23 +1443,26 @@
     }
 
     .sf-injury-svg-col {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .sf-injury-svg-figures {
         flex-direction: row;
         justify-content: center;
-        flex-wrap: wrap;
     }
 
     .sf-heatmap-body-svg {
-        width: 70px;
+        width: 80px;
     }
 
     .sf-injury-svg-hint {
-        width: 100%;
         max-width: none;
     }
 }
 
 @media (max-width: 768px) {
     .sf-heatmap-body-svg {
-        width: 60px;
+        width: 65px;
     }
 }
