@@ -50,6 +50,7 @@ $allowed = [
     'role_categories'  => '/assets/pages/role_categories.php',
     'feedback'         => '/assets/pages/feedback.php',
     'playlist_manager' => '/assets/pages/playlist_manager.php',
+    'updates'          => '/assets/pages/updates.php',
 ];
 
 if (!isset($allowed[$page])) {
