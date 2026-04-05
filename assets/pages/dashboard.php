@@ -197,7 +197,7 @@ try {
         INNER JOIN incident_body_part ibp ON ibp.incident_id = f.id
         WHERE f.state = 'published'
         ORDER BY f.updated_at DESC
-        LIMIT 15
+        LIMIT 200
     ");
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -540,6 +540,9 @@ try {
                                 <span class="sf-injury-active-filter" id="sf-injury-active-filter"></span>
                             </div>
                             <div class="sf-recent-compact-list" id="sf-injury-flash-list"></div>
+                            <button class="sf-injury-show-all-btn" id="sf-injury-show-all-btn" style="display:none;" aria-haspopup="dialog">
+                                <span class="sf-injury-show-all-text"></span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -547,6 +550,51 @@ try {
 
         </div>
 
+    </div>
+</div>
+
+<!-- ========== INJURY MODAL ========== -->
+<div class="sf-injury-modal" id="sf-injury-modal" role="dialog" aria-modal="true" aria-labelledby="sf-injury-modal-title" style="display:none;">
+    <div class="sf-injury-modal-backdrop" id="sf-injury-modal-backdrop"></div>
+    <div class="sf-injury-modal-box">
+        <!-- Modal header -->
+        <div class="sf-injury-modal-header">
+            <h2 class="sf-injury-modal-title" id="sf-injury-modal-title">
+                <?= htmlspecialchars(sf_term('dashboard_injury_modal_title', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+            </h2>
+            <button class="sf-injury-modal-close" id="sf-injury-modal-close" aria-label="<?= htmlspecialchars(sf_term('dashboard_injury_modal_close', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                <span aria-hidden="true">✕</span>
+            </button>
+        </div>
+        <!-- Modal body: two-column layout -->
+        <div class="sf-injury-modal-body">
+            <!-- Left column: sticky SVG body figures -->
+            <div class="sf-injury-modal-svg-col">
+                <p class="sf-injury-svg-hint">
+                    <span class="sf-injury-svg-hint-icon" aria-hidden="true">ℹ</span>
+                    <?= htmlspecialchars(sf_term('dashboard_injury_click_hint', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+                </p>
+                <div class="sf-injury-svg-figures">
+                    <svg class="sf-heatmap-body-svg" id="sf-modal-heatmap-svg-front"
+                         viewBox="0 0 261.58 620.34" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_front_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                        <?= $heatmapFrontSvg ?>
+                    </svg>
+                    <svg class="sf-heatmap-body-svg sf-heatmap-body-svg--back" id="sf-modal-heatmap-svg-back"
+                         viewBox="0 0 261.58 597.52" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-label="<?= htmlspecialchars(sf_term('body_map_back_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                        <?= $heatmapBackSvg ?>
+                    </svg>
+                </div>
+                <div class="sf-injury-modal-active-filter-wrap">
+                    <span class="sf-injury-active-filter" id="sf-injury-modal-active-filter"></span>
+                </div>
+            </div>
+            <!-- Right column: scrollable full list -->
+            <div class="sf-injury-modal-list-col">
+                <div class="sf-recent-compact-list sf-injury-modal-list" id="sf-injury-modal-flash-list"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -563,5 +611,6 @@ window.SF_INJURY_I18N = {
     today:         <?= json_encode(sf_term('time_ago_today', $uiLang),                  JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
     yesterday:     <?= json_encode(sf_term('time_ago_yesterday', $uiLang),              JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
     daysAgo:       <?= json_encode(sf_term('time_ago_days', $uiLang),                   JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
+    showAllCount:  <?= json_encode(sf_term('dashboard_injury_show_all_count', $uiLang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
 };
 </script>

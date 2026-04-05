@@ -122,7 +122,7 @@ try {
           $dateFilter
           $siteFilter
         ORDER BY f.updated_at DESC
-        LIMIT 15
+        LIMIT 200
     ";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
