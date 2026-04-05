@@ -51,7 +51,11 @@ window.SFImageEditor = (() => {
                 // icon-only
                 selectedTool: (selected && selected.type === 'icon') ? (selected.tool || null) : null,
                 selectedRot: (selected && selected.type === 'icon') ? Number(selected.rot || 0) : null,
-                selectedSize: (selected && selected.type === 'icon') ? Number(selected.size || 72) : null,
+
+                // icon + blur
+                selectedSize: (selected && (selected.type === 'icon' || selected.type === 'blur'))
+                    ? Number(selected.size || (selected.type === 'icon' ? 72 : 140))
+                    : null,
 
                 // text-only
                 selectedText: (selected && selected.type === 'text') ? String(selected.text || '') : null,
@@ -101,6 +105,21 @@ window.SFImageEditor = (() => {
             const max = 200;
 
             const cur = Number(a.size || 32);
+            const next = Math.max(min, Math.min(max, cur + Number(delta || 0)));
+            if (next === cur) return;
+
+            a.size = next;
+            _emitState();
+            draw();
+            return;
+        }
+
+        // BLUR
+        if (a.type === 'blur') {
+            const min = 20;
+            const max = 500;
+
+            const cur = Number(a.size || 140);
             const next = Math.max(min, Math.min(max, cur + Number(delta || 0)));
             if (next === cur) return;
 
@@ -529,6 +548,36 @@ window.SFImageEditor = (() => {
 
                     return;
                 }
+
+                // --- BLUR ---
+                if (a.type === 'blur') {
+                    const size = Number(a.size || 140);
+                    const ax = Number(a.x || 0);
+                    const ay = Number(a.y || 0);
+
+                    ctx.save();
+
+                    // Selection highlight (drawn before clip so it appears outside the circle)
+                    if (a.id === selectedAnnoId) {
+                        ctx.strokeStyle = '#3b82f6';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]);
+                        ctx.strokeRect(ax - size / 2 - 4, ay - size / 2 - 4, size + 8, size + 8);
+                        ctx.setLineDash([]);
+                    }
+
+                    // Clip to circle
+                    ctx.beginPath();
+                    ctx.arc(ax, ay, size / 2, 0, Math.PI * 2);
+                    ctx.clip();
+
+                    // Draw blurred version of the background image inside the circle
+                    ctx.filter = 'blur(15px)';
+                    drawImageWithTransform(ctx);
+
+                    ctx.restore();
+                    return;
+                }
             });
         }
     }
@@ -558,6 +607,17 @@ window.SFImageEditor = (() => {
 
             if (a.type === 'icon') {
                 const size = Number(a.size || 64);
+                const ax = Number(a.x || 0);
+                const ay = Number(a.y || 0);
+                const left = ax - size / 2;
+                const top = ay - size / 2;
+                if (x >= left && x <= left + size && y >= top && y <= top + size) {
+                    return a;
+                }
+            }
+
+            if (a.type === 'blur') {
+                const size = Number(a.size || 140);
                 const ax = Number(a.x || 0);
                 const ay = Number(a.y || 0);
                 const left = ax - size / 2;
@@ -751,6 +811,11 @@ window.SFImageEditor = (() => {
                 return;
             }
 
+            if (currentTool === 'blur') {
+                addBlur(x, y);
+                return;
+            }
+
             addIcon(currentTool, x, y);
         }, { passive: true });
 
@@ -936,6 +1001,8 @@ window.SFImageEditor = (() => {
                         if (currentTool === 'text') {
                             lastPointer = { x: tapX, y: tapY };
                             document.dispatchEvent(new CustomEvent('sf:editor-request-text', { detail: { x: tapX, y: tapY } }));
+                        } else if (currentTool === 'blur') {
+                            addBlur(tapX, tapY);
                         } else {
                             addIcon(currentTool, tapX, tapY);
                         }
@@ -1002,6 +1069,20 @@ window.SFImageEditor = (() => {
         });
 
         // Valitse juuri lisätty -> nyt Rotate/Delete/Size/Text voidaan aktivoida
+        _setSelected(id);
+    }
+
+    function addBlur(x, y) {
+        const id = 'a' + Math.random().toString(16).slice(2);
+
+        annotations.push({
+            id,
+            type: 'blur',
+            x: Number(x),
+            y: Number(y),
+            size: 140
+        });
+
         _setSelected(id);
     }
 
@@ -1228,7 +1309,15 @@ window.SFImageEditor = (() => {
     }
 
     // Shared helper: draw annotations onto any 2D context
-    function _drawAnnotationsOnCtx(ctx, anns) {
+    /**
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Array} anns
+     * @param {function(CanvasRenderingContext2D):void} [drawBgFn] - Optional callback that
+     *   re-draws the background image onto the given context. Used by blur annotations to
+     *   render the blurred background inside the clip region. If omitted, falls back to the
+     *   module-level drawImageWithTransform (correct for live draw and drawForExport).
+     */
+    function _drawAnnotationsOnCtx(ctx, anns, drawBgFn) {
         if (!anns || !anns.length) return;
 
         anns.forEach(a => {
@@ -1333,6 +1422,30 @@ window.SFImageEditor = (() => {
                     ctx.restore();
                 }
             }
+
+            // --- BLUR ---
+            if (a.type === 'blur') {
+                const size = Number(a.size || 140);
+                const ax = Number(a.x || 0);
+                const ay = Number(a.y || 0);
+
+                ctx.save();
+
+                // Clip to circle
+                ctx.beginPath();
+                ctx.arc(ax, ay, size / 2, 0, Math.PI * 2);
+                ctx.clip();
+
+                // Draw blurred version of the background image inside the circle
+                ctx.filter = 'blur(15px)';
+                if (typeof drawBgFn === 'function') {
+                    drawBgFn(ctx);
+                } else {
+                    drawImageWithTransform(ctx);
+                }
+
+                ctx.restore();
+            }
         });
     }
 
@@ -1425,7 +1538,19 @@ window.SFImageEditor = (() => {
                     ctx.restore();
 
                     // Draw annotations using shared helper
-                    _drawAnnotationsOnCtx(ctx, anns);
+                    // Pass a drawBgFn so blur annotations re-render the correct image/transform
+                    _drawAnnotationsOnCtx(ctx, anns, (c) => {
+                        c.save();
+                        c.translate(t.x, t.y);
+                        c.scale(t.scale, t.scale);
+                        if (t.rotation !== 0) {
+                            c.translate(image.width / 2, image.height / 2);
+                            c.rotate((t.rotation * Math.PI) / 180);
+                            c.translate(-image.width / 2, -image.height / 2);
+                        }
+                        c.drawImage(image, 0, 0);
+                        c.restore();
+                    });
 
                     try {
                         resolve(oc.toDataURL('image/png'));
@@ -1471,7 +1596,7 @@ window.SFImageEditor = (() => {
 
     return {
         setup, draw, initCanvasEvents,
-        setTool, addIcon, addLabel, addLabelAt,
+        setTool, addIcon, addBlur, addLabel, addLabelAt,
         addTextAt,
         hasSelectedText, getSelectedText, updateSelectedText,
         deleteSelected, rotateSelected,
