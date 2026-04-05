@@ -74,11 +74,6 @@ filter: brightness(0) invert(1);
         tb.className = 'hidden';
         const i18n = window.SF_I18N || {};
         tb.innerHTML = `
-      <button type="button" class="sf-atb-btn" data-act="move" title="${i18n.anno_move || 'Siirrä'}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
-        </svg>
-      </button>
       <button type="button" class="sf-atb-btn" data-act="edit" title="${i18n.btn_edit || 'Edit'}">✎</button>
       <button type="button" class="sf-atb-btn" data-act="rotate" title="${i18n.anno_rotate || 'Rotate'}">⟲</button>
       <button type="button" class="sf-atb-btn" data-act="minus" title="${i18n.anno_size_down || 'Decrease size'}">−</button>
@@ -143,8 +138,10 @@ filter: brightness(0) invert(1);
         const vy = rect.top + (y / canvas.height) * rect.height;
 
         // Lasketaan "kuinka paljon ylemmäs" toolbar siirretään, jotta se ei mene ikonille
-        const selSize = Number(detail.selectedSize || 120);
-        const iconHalf = Math.max(18, Math.min(80, selSize / 2));
+        // Huomioi CSS-skaalaus: canvas on 1920px leveä, mutta näytöllä pienempi
+        const canvasScale = rect.height / canvas.height;
+        const selSizePx = Number(detail.selectedSize || 140) * canvasScale;
+        const iconHalf = Math.max(18, selSizePx / 2);
         const gap = 10;
 
         // Toolbarin target-piste = ikonin yläpuolella
@@ -501,8 +498,8 @@ filter: brightness(0) invert(1);
             // Tekstiä saa lisätä aina (ei vaadi valintaa)
             if (txtBtn) txtBtn.disabled = false;
 
-            if (sizeUp) sizeUp.disabled = !selectedIsIcon;
-            if (sizeDown) sizeDown.disabled = !selectedIsIcon;
+            if (sizeUp) sizeUp.disabled = !(hasSelected && (detail.selectedType === 'icon' || detail.selectedType === 'blur'));
+            if (sizeDown) sizeDown.disabled = !(hasSelected && (detail.selectedType === 'icon' || detail.selectedType === 'blur'));
 
             const all = document.querySelectorAll('.sf-edit-anno-btn[data-sf-tool]');
             all.forEach(b => {

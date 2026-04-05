@@ -1897,6 +1897,13 @@ window.SF_FLASH_ID = <?= (int)$editId ?>;
             <button type="button" class="sf-edit-anno-btn" data-sf-tool="cross" title="<?= htmlspecialchars(sf_term('anno_cross', $uiLang) ?? 'Risti', ENT_QUOTES, 'UTF-8') ?>">
               <img src="<?= $base ?>/assets/img/annotations/cross-red.png" alt="" class="sf-anno-icon">
             </button>
+            <button type="button" class="sf-edit-anno-btn" data-sf-tool="blur" title="<?= htmlspecialchars(sf_term('anno_blur', $uiLang) ?? 'Sumennus (Kasvot / Kilvet)', ENT_QUOTES, 'UTF-8') ?>">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+                <line x1="2" y1="2" x2="22" y2="22"/>
+              </svg>
+            </button>
           </div>
           
           <!-- Valitun merkinnän kontrollit -->
