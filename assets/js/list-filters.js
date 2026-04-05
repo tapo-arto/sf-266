@@ -51,6 +51,7 @@
 
     // Get filter elements
     const filterType = document.getElementById('f-type');
+    const filterOriginalType = document.getElementById('f-original-type');
     const filterState = document.getElementById('f-state');
     const filterSite = document.getElementById('f-site');
     const filterSearch = document.getElementById('f-q');
@@ -232,6 +233,8 @@
                 // Update filter value
                 if (currentFilterType === 'type') {
                     filterType.value = item.value;
+                } else if (currentFilterType === 'original_type') {
+                    if (filterOriginalType) filterOriginalType.value = item.value;
                 } else if (currentFilterType === 'state') {
                     filterState.value = item.value;
                 } else if (currentFilterType === 'site') {
@@ -286,6 +289,8 @@
         bottomSheetClear.addEventListener('click', () => {
             if (currentFilterType === 'type') {
                 filterType.value = '';
+            } else if (currentFilterType === 'original_type') {
+                if (filterOriginalType) filterOriginalType.value = '';
             } else if (currentFilterType === 'state') {
                 filterState.value = '';
             } else if (currentFilterType === 'site') {
@@ -392,6 +397,14 @@
                         { value: 'yellow', label: document.querySelector('#f-type option[value="yellow"]')?.textContent || i18n.typeYellow || 'Yellow', selected: filterType.value === 'yellow' },
                         { value: 'green', label: document.querySelector('#f-type option[value="green"]')?.textContent || i18n.typeGreen || 'Green', selected: filterType.value === 'green' }
                     ];
+                } else if (filterName === 'original_type') {
+                    options.title = i18n.filterChipOriginalTypeAll || 'Original type';
+                    const origTypeOptions = filterOriginalType ? Array.from(filterOriginalType.options) : [];
+                    options.items = origTypeOptions.map(opt => ({
+                        value: opt.value,
+                        label: opt.textContent,
+                        selected: filterOriginalType.value === opt.value
+                    }));
                 } else if (filterName === 'state') {
                     options.title = filterState.previousElementSibling?.textContent || i18n.filterState || 'State';
                     const stateOptions = Array.from(filterState.options);
@@ -468,6 +481,13 @@
                 value: opt.value,
                 label: opt.textContent
             }));
+        } else if (filterName === 'original_type') {
+            currentValue = filterOriginalType ? filterOriginalType.value : '';
+            const origTypeOptions = filterOriginalType ? Array.from(filterOriginalType.options) : [];
+            options = origTypeOptions.map(opt => ({
+                value: opt.value,
+                label: opt.textContent
+            }));
         } else if (filterName === 'state') {
             currentValue = filterState.value;
             const stateOptions = Array.from(filterState.options);
@@ -504,6 +524,8 @@
                 // Set value - EMPTY when "All"
                 if (filterName === 'type') {
                     filterType.value = opt.value; // '' when All
+                } else if (filterName === 'original_type') {
+                    if (filterOriginalType) filterOriginalType.value = opt.value;
                 } else if (filterName === 'state') {
                     filterState.value = opt.value;
                 } else if (filterName === 'site') {
@@ -1042,6 +1064,7 @@
 
             // Remove all filter parameters
             url.searchParams.delete('type');
+            url.searchParams.delete('original_type');
             url.searchParams.delete('state');
             url.searchParams.delete('site');
             url.searchParams.delete('q');
@@ -1061,6 +1084,7 @@
         const params = url.searchParams;
 
         const typeVal = filterType.value;
+        const originalTypeVal = filterOriginalType ? filterOriginalType.value : '';
         const stateVal = filterState.value;
         const siteVal = filterSite.value;
         const searchVal = filterSearch.value.trim();
@@ -1070,6 +1094,7 @@
         const onlyOriginalsVal = filterOnlyOriginals ? filterOnlyOriginals.checked : false;
 
         if (typeVal) { params.set('type', typeVal); } else { params.delete('type'); }
+        if (originalTypeVal) { params.set('original_type', originalTypeVal); } else { params.delete('original_type'); }
         if (stateVal) { params.set('state', stateVal); } else { params.delete('state'); }
 
         // Always include 'site' so PHP distinguishes "explicit empty = all" from "missing = default worksite"
@@ -1096,6 +1121,7 @@
         const siteInUrl = urlParams.has('site');
 
         const hasFilters = filterType.value !== '' ||
+            (filterOriginalType && filterOriginalType.value !== '') ||
             filterState.value !== '' ||
             (siteInUrl && filterSite.value !== '') ||
             filterSearch.value !== '' ||
@@ -1146,6 +1172,18 @@
                 } else {
                     chip.classList.add('active');
                     const selectedOption = filterType.querySelector(`option[value="${currentValue}"]`);
+                    chipLabel.textContent = selectedOption?.textContent || currentValue;
+                }
+            } else if (filterName === 'original_type') {
+                const currentValue = filterOriginalType ? filterOriginalType.value : '';
+
+                if (!currentValue) {
+                    chip.classList.remove('active');
+                    const defaultLabel = i18n.filterChipOriginalTypeAll || 'Alkuperäinen tyyppi';
+                    chipLabel.textContent = defaultLabel;
+                } else {
+                    chip.classList.add('active');
+                    const selectedOption = filterOriginalType ? filterOriginalType.querySelector(`option[value="${currentValue}"]`) : null;
                     chipLabel.textContent = selectedOption?.textContent || currentValue;
                 }
             } else if (filterName === 'state') {
@@ -1400,6 +1438,7 @@
 
             // Remove all filter parameters
             url.searchParams.delete('type');
+            url.searchParams.delete('original_type');
             url.searchParams.delete('state');
             url.searchParams.delete('site');
             url.searchParams.delete('q');

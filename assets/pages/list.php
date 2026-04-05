@@ -557,9 +557,17 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
         </svg>
     </button>
 
-    <button type="button" class="sf-chip<?= $onlyOriginals ? ' active' : '' ?>" data-filter="only_originals" data-value="<?= $onlyOriginals ? '1' : '' ?>">
+    <button type="button" class="sf-chip<?= $originalType !== '' ? ' active' : '' ?>" data-filter="original_type" data-value="<?= htmlspecialchars($originalType) ?>">
         <span class="chip-label">
-            <?= htmlspecialchars(sf_term('filter_chip_only_originals', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            <?php if ($originalType === 'red'): ?>
+                <?= htmlspecialchars(sf_term('first_release', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            <?php elseif ($originalType === 'yellow'): ?>
+                <?= htmlspecialchars(sf_term('dangerous_situation', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            <?php elseif ($originalType === 'green'): ?>
+                <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            <?php else: ?>
+                <?= htmlspecialchars(sf_term('filter_chip_original_type_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+            <?php endif; ?>
         </span>
         <svg class="chip-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6,9 12,15 18,9"/>
@@ -658,6 +666,21 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
             <?= htmlspecialchars(sf_term('dangerous_situation', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
         </option>
         <option value="green" <?= $type === 'green' ? 'selected' : '' ?>>
+            <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        </option>
+    </select>
+
+    <select id="f-original-type" name="original_type">
+        <option value="">
+            <?= htmlspecialchars(sf_term('filter_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        </option>
+        <option value="red" <?= $originalType === 'red' ? 'selected' : '' ?>>
+            <?= htmlspecialchars(sf_term('first_release', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        </option>
+        <option value="yellow" <?= $originalType === 'yellow' ? 'selected' : '' ?>>
+            <?= htmlspecialchars(sf_term('dangerous_situation', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+        </option>
+        <option value="green" <?= $originalType === 'green' ? 'selected' : '' ?>>
             <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
         </option>
     </select>
@@ -1944,6 +1967,7 @@ window.SF_LIST_I18N = {
     filterSite: <?= json_encode(sf_term('filter_site', $currentUiLang), JSON_UNESCAPED_UNICODE) ?>,
     filterDate: <?= json_encode(sf_term('filter_chip_date', $currentUiLang), JSON_UNESCAPED_UNICODE) ?>,
     filterChipTypeAll: <?= json_encode(sf_term('filter_chip_type_all', $currentUiLang), JSON_UNESCAPED_UNICODE) ?>,
+    filterChipOriginalTypeAll: <?= json_encode(sf_term('filter_chip_original_type_all', $currentUiLang), JSON_UNESCAPED_UNICODE) ?>,
     filterChipStateAll: <?= json_encode(sf_term('filter_chip_state_all', $currentUiLang), JSON_UNESCAPED_UNICODE) ?>,
     filterChipSiteAll: <?= json_encode(sf_term('filter_chip_site_all', $currentUiLang), JSON_UNESCAPED_UNICODE) ?>,
     filterDateFrom: <?= json_encode(sf_term('date_from', $currentUiLang), JSON_UNESCAPED_UNICODE) ?>,
