@@ -37,27 +37,34 @@ if ($currentPage === 'updates') {
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
+    // Invalidate the session cache so the badge disappears immediately
+    unset($_SESSION['sf_updates_badge_cache']);
 } else {
-    // Check whether there are published updates newer than the last visit
-    try {
-        $db = Database::getInstance();
-        $stmt = $db->query(
-            "SELECT UNIX_TIMESTAMP(created_at) AS created_ts
-             FROM sf_changelog
-             WHERE is_published = 1
-             ORDER BY created_at DESC
-             LIMIT 1"
-        );
-        $latestUpdate = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($latestUpdate) {
-            $latestTs  = (int)$latestUpdate['created_ts'];
-            $lastSeen  = isset($_COOKIE['sf_updates_last_seen']) ? (int)$_COOKIE['sf_updates_last_seen'] : 0;
+    // Check whether there are published updates newer than the last visit.
+    // Cache the latest update timestamp in the session for 120 seconds to reduce DB load.
+    $lastSeen = isset($_COOKIE['sf_updates_last_seen']) ? (int)$_COOKIE['sf_updates_last_seen'] : 0;
+    $cachedBadge = $_SESSION['sf_updates_badge_cache'] ?? null;
+    if ($cachedBadge !== null && (time() - (int)($cachedBadge['fetched'] ?? 0)) < 120) {
+        $hasNewUpdates = (int)($cachedBadge['latest_ts'] ?? 0) > $lastSeen;
+    } else {
+        try {
+            $db = Database::getInstance();
+            $stmt = $db->query(
+                "SELECT UNIX_TIMESTAMP(created_at) AS created_ts
+                 FROM sf_changelog
+                 WHERE is_published = 1
+                 ORDER BY created_at DESC
+                 LIMIT 1"
+            );
+            $latestUpdate = $stmt->fetch(PDO::FETCH_ASSOC);
+            $latestTs = $latestUpdate ? (int)$latestUpdate['created_ts'] : 0;
+            $_SESSION['sf_updates_badge_cache'] = ['fetched' => time(), 'latest_ts' => $latestTs];
             if ($latestTs > $lastSeen) {
                 $hasNewUpdates = true;
             }
+        } catch (Exception $e) {
+            // Silently ignore DB errors – badge simply won't show
         }
-    } catch (Exception $e) {
-        // Silently ignore DB errors – badge simply won't show
     }
 }
 
