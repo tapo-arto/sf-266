@@ -54,7 +54,7 @@ window.SFImageEditor = (() => {
 
                 // icon + blur
                 selectedSize: (selected && (selected.type === 'icon' || selected.type === 'blur'))
-                    ? Number(selected.size || (selected.type === 'icon' ? 72 : 140))
+                    ? Number(selected.size || (selected.type === 'icon' ? 72 : 220))
                     : null,
 
                 // text-only
@@ -119,7 +119,7 @@ window.SFImageEditor = (() => {
             const min = 20;
             const max = 500;
 
-            const cur = Number(a.size || 140);
+            const cur = Number(a.size || 220);
             const next = Math.max(min, Math.min(max, cur + Number(delta || 0)));
             if (next === cur) return;
 
@@ -462,7 +462,7 @@ window.SFImageEditor = (() => {
                     });
 
                     const padding = 12;
-                    const totalHeight = lines.length * lineHeight;
+                    const totalHeight = (lines.length - 1) * lineHeight + fontSize;
 
                     // Improved semi-transparent background with rounded corners
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
@@ -551,7 +551,7 @@ window.SFImageEditor = (() => {
 
                 // --- BLUR ---
                 if (a.type === 'blur') {
-                    const size = Number(a.size || 140);
+                    const size = Number(a.size || 220);
                     const ax = Number(a.x || 0);
                     const ay = Number(a.y || 0);
 
@@ -572,7 +572,7 @@ window.SFImageEditor = (() => {
                     ctx.clip();
 
                     // Draw blurred version of the background image inside the circle
-                    ctx.filter = 'blur(15px)';
+                    ctx.filter = 'blur(25px)';
                     drawImageWithTransform(ctx);
 
                     ctx.restore();
@@ -617,7 +617,7 @@ window.SFImageEditor = (() => {
             }
 
             if (a.type === 'blur') {
-                const size = Number(a.size || 140);
+                const size = Number(a.size || 220);
                 const ax = Number(a.x || 0);
                 const ay = Number(a.y || 0);
                 const left = ax - size / 2;
@@ -645,7 +645,7 @@ window.SFImageEditor = (() => {
                 const padding = 12;
 
                 const w = Math.min(980, Math.max(140, maxLen * (fontSize * 0.6)));
-                const h = lines.length * lineHeight;
+                const h = (lines.length - 1) * lineHeight + fontSize;
 
                 // Hit test matches the background box: (x - padding, y - padding) to (x + w + padding, y + h + padding)
                 if (x >= ax - padding && x <= ax + w + padding && y >= ay - padding && y <= ay + h + padding) {
@@ -1080,7 +1080,7 @@ window.SFImageEditor = (() => {
             type: 'blur',
             x: Number(x),
             y: Number(y),
-            size: 140
+            size: 220
         });
 
         _setSelected(id);
@@ -1339,7 +1339,7 @@ window.SFImageEditor = (() => {
                 ctx.textBaseline = 'top';
 
                 const padX = 12;
-                const padY = 10;
+                const padY = 12;
                 const radius = 12;
                 const maxWidth = 980;
 
@@ -1364,7 +1364,7 @@ window.SFImageEditor = (() => {
 
                 const lineH = Math.round(fontSize * 1.25);
                 const textW = Math.max(0, ...lines.map(l => ctx.measureText(l).width));
-                const textH = Math.max(1, lines.length) * lineH;
+                const textH = Math.max(1, (lines.length - 1) * lineH + fontSize);
                 const boxW = Math.min(maxWidth, textW) + padX * 2;
                 const boxH = textH + padY * 2;
                 const bx = x;
@@ -1425,7 +1425,7 @@ window.SFImageEditor = (() => {
 
             // --- BLUR ---
             if (a.type === 'blur') {
-                const size = Number(a.size || 140);
+                const size = Number(a.size || 220);
                 const ax = Number(a.x || 0);
                 const ay = Number(a.y || 0);
 
@@ -1437,7 +1437,7 @@ window.SFImageEditor = (() => {
                 ctx.clip();
 
                 // Draw blurred version of the background image inside the circle
-                ctx.filter = 'blur(15px)';
+                ctx.filter = 'blur(25px)';
                 if (typeof drawBgFn === 'function') {
                     drawBgFn(ctx);
                 } else {
