@@ -143,6 +143,13 @@ return [
     'it' => 'Testo',
     'el' => 'Κείμενο',
 ],
+'anno_blur' => [
+    'fi' => 'Sumennus',
+    'sv' => 'Oskärpa',
+    'en' => 'Blur',
+    'it' => 'Sfocatura',
+    'el' => 'Θόλωμα',
+],
 'grid_heading' => [
     'fi' => 'Kuvien asettelu',
     'sv' => 'Bildlayout',
