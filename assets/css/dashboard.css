@@ -1618,6 +1618,7 @@
     align-self: flex-start;
     /* sticky within the flex row – the column itself doesn't scroll */
     overflow-y: auto;
+    /* 4.5rem = approximate modal header height (padding + title + border) */
     max-height: calc(90vh - 4.5rem);
 }
 

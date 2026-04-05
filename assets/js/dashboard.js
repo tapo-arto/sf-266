@@ -634,7 +634,7 @@
         modal.style.display = 'flex';
         document.body.classList.add('sf-modal-open');
 
-        // Focus the close button for accessibility
+        // Brief delay so the modal is visible before focus moves (avoids layout-shift artefacts)
         var closeBtn = document.getElementById('sf-injury-modal-close');
         if (closeBtn) setTimeout(function () { closeBtn.focus(); }, 50);
     }
@@ -661,10 +661,13 @@
             backdrop.addEventListener('click', closeInjuryModal);
         }
 
-        // Escape key closes modal
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeInjuryModal();
-        });
+        // Escape key closes modal (use a named function so it can be checked)
+        if (!document._sfInjuryModalEscBound) {
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeInjuryModal();
+            });
+            document._sfInjuryModalEscBound = true;
+        }
 
         // Modal SVG click handlers
         ['sf-modal-heatmap-svg-front', 'sf-modal-heatmap-svg-back'].forEach(function (svgId) {
