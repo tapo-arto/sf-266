@@ -144,6 +144,7 @@
     border-radius: 999px;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px rgba(254, 224, 0, 0.3);
+    position: relative;
 }
 
 .sf-nav-link:hover {
@@ -161,6 +162,31 @@
     width: 20px;
     height: 20px;
     object-fit: contain;
+}
+
+/* ===== NOTIFICATION BADGE (Updates) ===== */
+.sf-nav-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 11px;
+    height: 11px;
+    background: #ef4444;
+    border-radius: 50%;
+    border: 2px solid #0f172a;
+    pointer-events: none;
+    animation: sf-badge-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes sf-badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-nav-badge {
+        animation: none;
+    }
 }
 
 /* ===== CTA: UUSI SAFETYFLASH ===== */
