@@ -40,6 +40,16 @@ $rawJson     = trim($_POST['translations'] ?? '');
 $isPublished = (int)($_POST['is_published'] ?? 0) === 1 ? 1 : 0;
 $feedbackId  = (int)($_POST['feedback_id'] ?? 0);
 
+// Optional publish date override; validate format and actual date validity
+$publishDateRaw = trim($_POST['publish_date'] ?? '');
+$publishDate    = null;
+if ($publishDateRaw !== '') {
+    $dt = DateTime::createFromFormat('Y-m-d', $publishDateRaw);
+    if ($dt && $dt->format('Y-m-d') === $publishDateRaw) {
+        $publishDate = $publishDateRaw;
+    }
+}
+
 if ($updateId <= 0) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Invalid update ID'], JSON_UNESCAPED_UNICODE);
@@ -69,6 +79,7 @@ try {
         "UPDATE sf_changelog
          SET translations = :translations,
              is_published = :is_published,
+             publish_date = :publish_date,
              feedback_id  = :feedback_id,
              updated_at   = NOW()
          WHERE id = :id"
@@ -76,6 +87,7 @@ try {
     $stmt->execute([
         ':translations' => json_encode($translations, JSON_UNESCAPED_UNICODE),
         ':is_published' => $isPublished,
+        ':publish_date' => $publishDate,
         ':feedback_id'  => $feedbackId > 0 ? $feedbackId : null,
         ':id'           => $updateId,
     ]);

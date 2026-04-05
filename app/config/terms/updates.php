@@ -164,4 +164,25 @@ return [
     'it' => 'Chiudi',
     'el' => 'Κλείσιμο',
 ],
+'updates_field_publish_date' => [
+    'fi' => 'Julkaisupäivä',
+    'sv' => 'Publiceringsdatum',
+    'en' => 'Publish date',
+    'it' => 'Data di pubblicazione',
+    'el' => 'Ημερομηνία δημοσίευσης',
+],
+'updates_filter_all' => [
+    'fi' => 'Kaikki',
+    'sv' => 'Alla',
+    'en' => 'All',
+    'it' => 'Tutti',
+    'el' => 'Όλα',
+],
+'updates_filter_label' => [
+    'fi' => 'Suodata kuukauden mukaan:',
+    'sv' => 'Filtrera efter månad:',
+    'en' => 'Filter by month:',
+    'it' => 'Filtra per mese:',
+    'el' => 'Φιλτράρισμα ανά μήνα:',
+],
 ];

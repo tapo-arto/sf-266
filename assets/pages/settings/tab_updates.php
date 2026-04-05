@@ -81,7 +81,11 @@ $csrfToken = sf_csrf_token();
                 $isPublished = (int)$entry['is_published'];
                 $authorName = trim(($entry['first_name'] ?? '') . ' ' . ($entry['last_name'] ?? ''));
                 if ($authorName === '') $authorName = 'Admin';
-                $dateStr = date('d.m.Y H:i', strtotime($entry['created_at']));
+                // Show publish_date in admin listing when set, otherwise created_at
+                $rawDisplayDate = !empty($entry['publish_date']) ? $entry['publish_date'] : $entry['created_at'];
+                $displayTs = strtotime($rawDisplayDate);
+                if ($displayTs === false) { $displayTs = time(); }
+                $dateStr = date('d.m.Y', $displayTs);
                 ?>
                 <div class="sf-updates-admin-item" id="update-row-<?= (int)$entry['id'] ?>">
                     <div class="sf-updates-admin-item-info">
@@ -107,7 +111,8 @@ $csrfToken = sf_csrf_token();
                                 data-id="<?= (int)$entry['id'] ?>"
                                 data-translations="<?= htmlspecialchars(json_encode($translations), ENT_QUOTES, 'UTF-8') ?>"
                                 data-is-published="<?= $isPublished ?>"
-                                data-feedback-id="<?= (int)($entry['feedback_id'] ?? 0) ?>">
+                                data-feedback-id="<?= (int)($entry['feedback_id'] ?? 0) ?>"
+                                data-publish-date="<?= htmlspecialchars($entry['publish_date'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             <?= htmlspecialchars(sf_term('admin_updates_edit', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                         </button>
                         <button type="button"
@@ -180,6 +185,16 @@ $csrfToken = sf_csrf_token();
                     </div>
                 </div>
             <?php endforeach; ?>
+
+            <div class="sf-form-group" style="margin-top:12px;">
+                <label for="updatePublishDate">
+                    <?= htmlspecialchars(sf_term('updates_field_publish_date', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                </label>
+                <input type="date"
+                       id="updatePublishDate"
+                       name="publish_date"
+                       class="sf-form-input">
+            </div>
 
             <div class="sf-form-group" style="margin-top:12px;">
                 <label class="sf-checkbox-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -373,6 +388,7 @@ $csrfToken = sf_csrf_token();
         document.getElementById('updateEditId').value = '0';
         document.getElementById('updateEditFeedbackId').value = '0';
         document.getElementById('updateIsPublished').checked = false;
+        document.getElementById('updatePublishDate').value = '';
         SUPPORTED_LANGS.forEach(lang => {
             const titleEl = document.getElementById('updateTitle_' + lang);
             if (titleEl) titleEl.value = '';
@@ -390,6 +406,9 @@ $csrfToken = sf_csrf_token();
         // Open modal first so editors are visible (not display:none) before Quill initializes
         openModal('modalUpdateEdit');
         resetForm();
+        // Pre-fill publish date with today's date
+        var today = new Date().toISOString().slice(0, 10);
+        document.getElementById('updatePublishDate').value = today;
     });
 
     // Edit update
@@ -410,6 +429,7 @@ $csrfToken = sf_csrf_token();
             document.getElementById('updateEditId').value = id;
             document.getElementById('updateEditFeedbackId').value = feedbackId;
             document.getElementById('updateIsPublished').checked = isPublished;
+            document.getElementById('updatePublishDate').value = this.dataset.publishDate || '';
 
             SUPPORTED_LANGS.forEach(lang => {
                 const titleEl = document.getElementById('updateTitle_' + lang);
@@ -452,6 +472,7 @@ $csrfToken = sf_csrf_token();
         formData.append('update_id', updateId);
         formData.append('feedback_id', feedbackId);
         formData.append('is_published', isPublished);
+        formData.append('publish_date', document.getElementById('updatePublishDate').value || '');
         formData.append('translations', JSON.stringify(translations));
 
         const endpoint = updateId > 0
