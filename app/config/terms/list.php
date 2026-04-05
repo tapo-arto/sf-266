@@ -101,6 +101,13 @@ return [
     'it' => 'Tipo originale',
     'el' => 'Αρχικός τύπος',
 ],
+'filter_chip_original_type_all' => [
+    'fi' => 'Alkuperäinen tyyppi',
+    'sv' => 'Ursprunglig typ',
+    'en' => 'Original type',
+    'it' => 'Tipo originale',
+    'el' => 'Αρχικός τύπος',
+],
 'filter_archived' => [
     'fi' => 'Arkistoidut',
     'sv' => 'Arkiverade',
