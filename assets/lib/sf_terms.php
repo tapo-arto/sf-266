@@ -113,6 +113,50 @@ if (!function_exists('sf_supported_languages')) {
     }
 }
 
+if (!function_exists('sf_bp_term')) {
+    /**
+     * Käännä kehonosan nimi SVG-tunnisteen perusteella.
+     *
+     * Muuntaa tietokannassa käytetyn svg_id-tunnisteen (esim. 'bp-head')
+     * termiavaimeksi (esim. 'bp_head') ja palauttaa käännetyn nimen.
+     *
+     * @param string $svgId SVG-elementtitunniste, esim. 'bp-head'
+     * @param string $lang  UI-kieli (fi, sv, en, it, el)
+     * @return string Käännetty kehonosan nimi
+     */
+    function sf_bp_term(string $svgId, string $lang = 'fi'): string
+    {
+        return sf_term(str_replace('-', '_', $svgId), $lang);
+    }
+}
+
+if (!function_exists('sf_bp_category_term')) {
+    /**
+     * Käännä kehonosaluokan nimi tietokantaan tallennetun suomenkielisen
+     * kategorianimen perusteella.
+     *
+     * @param string $dbCategory Tietokannassa oleva suomenkielinen kategorianimi
+     * @param string $lang       UI-kieli (fi, sv, en, it, el)
+     * @return string Käännetty kategorianimi
+     */
+    function sf_bp_category_term(string $dbCategory, string $lang = 'fi'): string
+    {
+        static $categoryTermKeys = [
+            'Pää ja niska' => 'bp_cat_head_neck',
+            'Keskivartalo' => 'bp_cat_torso',
+            'Yläraajat'    => 'bp_cat_upper_limbs',
+            'Alaraajat'    => 'bp_cat_lower_limbs',
+        ];
+
+        $key = $categoryTermKeys[$dbCategory] ?? null;
+        if ($key !== null) {
+            return sf_term($key, $lang);
+        }
+
+        return $dbCategory;
+    }
+}
+
 if (!function_exists('sf_role_name')) {
     /**
      * Käännä roolin nimi UI-kielelle

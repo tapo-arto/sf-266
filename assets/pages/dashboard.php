@@ -145,7 +145,6 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             bp.svg_id,
-            bp.name,
             bp.category,
             COUNT(DISTINCT COALESCE(f.translation_group_id, f.id)) AS cnt
         FROM body_parts bp
@@ -153,15 +152,15 @@ try {
         LEFT JOIN sf_flashes f
             ON  f.id    = ibp.incident_id
             AND f.state = 'published'
-        GROUP BY bp.id, bp.svg_id, bp.name, bp.category
+        GROUP BY bp.id, bp.svg_id, bp.category
         ORDER BY bp.sort_order
     ");
     $stmt->execute();
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $injuryBodyParts[] = [
             'svg_id'   => $row['svg_id'],
-            'name'     => $row['name'],
-            'category' => $row['category'],
+            'name'     => sf_bp_term($row['svg_id'], $uiLang),
+            'category' => sf_bp_category_term($row['category'], $uiLang),
             'count'    => (int)$row['cnt'],
         ];
     }
