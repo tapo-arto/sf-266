@@ -124,7 +124,7 @@ function sf_updates_sanitize_html(string $html): string
             }
         }
         ?>
-        <?php if (count($months) > 1): ?>
+        <?php if (!empty($months)): ?>
         <div class="sf-updates-filter" role="group" aria-label="<?= htmlspecialchars(sf_term('updates_filter_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
             <span class="sf-updates-filter-label">
                 <?= htmlspecialchars(sf_term('updates_filter_label', $uiLang), ENT_QUOTES, 'UTF-8') ?>
@@ -219,8 +219,8 @@ function sf_updates_sanitize_html(string $html): string
 
 <style>
 .sf-updates-description {
-    margin: 0.75rem 0 1.75rem;
-    color: var(--sf-text-secondary, #4b5563);
+    margin: 1.25rem 0 2rem;
+    color: rgba(255, 255, 255, 0.8);
     font-size: 1rem;
     line-height: 1.5;
 }
@@ -242,7 +242,7 @@ function sf_updates_sanitize_html(string $html): string
 
 .sf-updates-filter-label {
     font-size: 0.85rem;
-    color: var(--sf-muted);
+    color: rgba(255, 255, 255, 0.7);
     white-space: nowrap;
     padding-top: 5px;
     flex-shrink: 0;
