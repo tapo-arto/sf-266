@@ -5278,3 +5278,80 @@ jne.
         text-align: center;
     }
 }
+
+/* ── Original type badge on cards ────────────────────────────── */
+.card-original-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
+.card-original-type-label {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.badge-original-type {
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-original-red {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.badge-original-yellow {
+    background: #fefce8;
+    color: #a16207;
+    border: 1px solid #fde047;
+}
+
+.badge-original-green {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #86efac;
+}
+
+/* ── Injured body parts row on cards ─────────────────────────── */
+.card-body-parts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.card-body-parts-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    stroke: #f87171;
+    margin-right: 2px;
+}
+
+.card-body-part-tag {
+    display: inline-block;
+    background: #fff1f2;
+    color: #be123c;
+    border: 1px solid #fecdd3;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Compact view – hide body parts row to keep cards slim */
+.sf-list-container.view-compact .card-body-parts {
+    display: none;
+}
