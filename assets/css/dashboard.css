@@ -1494,3 +1494,188 @@
         width: 110px;
     }
 }
+
+/* ============================================
+   INJURY – SHOW ALL BUTTON
+   ============================================ */
+
+.sf-injury-show-all-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.5rem 1.25rem;
+    background: transparent;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+    gap: 0.375rem;
+}
+
+.sf-injury-show-all-btn:hover {
+    border-color: #dc2626;
+    color: #dc2626;
+    background: #fff5f5;
+}
+
+/* ============================================
+   INJURY MODAL
+   ============================================ */
+
+.sf-injury-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.sf-injury-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    cursor: pointer;
+}
+
+.sf-injury-modal-box {
+    position: relative;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sf-injury-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+}
+
+.sf-injury-modal-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.sf-injury-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 50%;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sf-injury-modal-close:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* Modal body: two columns */
+.sf-injury-modal-body {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* Left: sticky SVG column */
+.sf-injury-modal-svg-col {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.25rem 1rem 1.25rem 1.5rem;
+    border-right: 1px solid #f3f4f6;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    /* sticky within the flex row – the column itself doesn't scroll */
+    overflow-y: auto;
+    /* 4.5rem = approximate modal header height (padding + title + border) */
+    max-height: calc(90vh - 4.5rem);
+}
+
+.sf-injury-modal-active-filter-wrap {
+    min-height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Right: scrollable list */
+.sf-injury-modal-list-col {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem 1.25rem 1.25rem;
+    min-width: 0;
+}
+
+.sf-injury-modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ============================================
+   INJURY MODAL – RESPONSIVE
+   ============================================ */
+
+@media (max-width: 700px) {
+    .sf-injury-modal {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .sf-injury-modal-box {
+        border-radius: 20px 20px 0 0;
+        max-height: 92vh;
+        max-width: 100%;
+    }
+
+    .sf-injury-modal-body {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .sf-injury-modal-svg-col {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #f3f4f6;
+        padding: 1rem 1rem 0.75rem;
+        position: static;
+        max-height: none;
+        flex-direction: column;
+    }
+
+    .sf-injury-modal-list-col {
+        padding: 1rem;
+        overflow-y: visible;
+    }
+}

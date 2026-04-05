@@ -369,6 +369,27 @@ return [
     'it' => 'Nessun caso per questa parte del corpo',
     'el' => 'Δεν υπάρχουν περιπτώσεις για αυτό το μέρος σώματος',
 ],
+'dashboard_injury_show_all_count' => [
+    'fi' => 'Näytä kaikki {n} loukkaantumista',
+    'sv' => 'Visa alla {n} skador',
+    'en' => 'Show all {n} injuries',
+    'it' => 'Mostra tutti {n} infortuni',
+    'el' => 'Εμφάνιση όλων {n} τραυματισμών',
+],
+'dashboard_injury_modal_title' => [
+    'fi' => 'Kaikki loukkaantumiset',
+    'sv' => 'Alla skador',
+    'en' => 'All injuries',
+    'it' => 'Tutti gli infortuni',
+    'el' => 'Όλοι οι τραυματισμοί',
+],
+'dashboard_injury_modal_close' => [
+    'fi' => 'Sulje',
+    'sv' => 'Stäng',
+    'en' => 'Close',
+    'it' => 'Chiudi',
+    'el' => 'Κλείσιμο',
+],
 'month_1' => [
     'fi' => 'Tammikuu',
     'sv' => 'Januari',
