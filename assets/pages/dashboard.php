@@ -504,7 +504,7 @@ try {
                 </div>
 
                 <div class="sf-injury-layout">
-                    <!-- Left: SVG Body Figures (front + back) -->
+                    <!-- Top-left (60%): SVG Body Figures (front + back) -->
                     <div class="sf-injury-svg-col">
                         <p class="sf-injury-svg-hint">
                             <span class="sf-injury-svg-hint-icon" aria-hidden="true">ℹ</span>
@@ -524,13 +524,16 @@ try {
                         </div>
                     </div>
 
-                    <!-- Right: Chart + List -->
-                    <div class="sf-injury-data-col">
+                    <!-- Top-right (40%): Bar chart -->
+                    <div class="sf-injury-chart-col">
                         <div class="sf-injury-chart-section">
                             <h4 class="sf-injury-section-label"><?= htmlspecialchars(sf_term('dashboard_injury_chart_title', $uiLang), ENT_QUOTES, 'UTF-8') ?></h4>
                             <div id="sf-injury-chart" class="sf-injury-chart"></div>
                         </div>
+                    </div>
 
+                    <!-- Bottom (100%): Recent injury list -->
+                    <div class="sf-injury-list-col">
                         <div class="sf-injury-list-section">
                             <div class="sf-injury-list-header">
                                 <h4 class="sf-injury-section-label"><?= htmlspecialchars(sf_term('dashboard_injury_recent_title', $uiLang), ENT_QUOTES, 'UTF-8') ?></h4>

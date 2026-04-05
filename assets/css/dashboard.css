@@ -1194,38 +1194,54 @@
     min-width: 9rem;
 }
 
-/* Two-column layout: SVG figures | chart + list */
+/* Three-area grid: top-left (60%) SVGs | top-right (40%) chart | bottom (100%) list */
 .sf-injury-layout {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 3fr 2fr;
+    grid-template-rows: auto auto;
     gap: 1.25rem;
     margin-top: 0.75rem;
     align-items: start;
 }
 
-/* SVG column */
+/* SVG column – top-left */
 .sf-injury-svg-col {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
+    gap: 0.75rem;
+}
+
+/* Chart column – top-right */
+.sf-injury-chart-col {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+}
+
+/* List column – full bottom row */
+.sf-injury-list-col {
+    grid-column: 1 / -1;
+    grid-row: 2 / 3;
 }
 
 /* Figures wrapper – front + back side by side */
 .sf-injury-svg-figures {
     display: flex;
     flex-direction: row;
-    gap: 0.5rem;
+    gap: 1rem;
     align-items: flex-start;
     justify-content: center;
+    width: 100%;
 }
 
 .sf-heatmap-body-svg {
-    width: 90px;
+    width: 160px;
     height: auto;
     cursor: pointer;
     display: block;
+    touch-action: manipulation;
 }
 
 /* Body-part paths in heatmap mode */
@@ -1260,10 +1276,10 @@
     text-align: center;
     margin: 0;
     line-height: 1.4;
-    max-width: 200px;
     display: flex;
     align-items: flex-start;
     gap: 0.25rem;
+    justify-content: center;
 }
 
 .sf-injury-svg-hint-icon {
@@ -1273,17 +1289,14 @@
     font-size: 0.75rem;
 }
 
-/* Data column */
-.sf-injury-data-col {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+/* Chart column */
+.sf-injury-chart-col {
     min-width: 0;
 }
 
 /* Chart section */
 .sf-injury-chart-section {
-    /* inherits sf-injury-data-col flow */
+    /* inherits grid flow */
 }
 
 .sf-injury-section-label {
@@ -1362,7 +1375,20 @@
 
 /* List section */
 .sf-injury-list-section {
-    /* inherits sf-injury-data-col flow */
+    /* inherits sf-injury-list-col flow */
+}
+
+/* Full-width list: 2-column grid on desktop */
+.sf-injury-list-col .sf-recent-compact-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+}
+
+@media (max-width: 768px) {
+    .sf-injury-list-col .sf-recent-compact-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 .sf-injury-list-header {
@@ -1439,10 +1465,17 @@
 @media (max-width: 1024px) {
     .sf-injury-layout {
         grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+
+    .sf-injury-svg-col,
+    .sf-injury-chart-col,
+    .sf-injury-list-col {
+        grid-column: 1 / -1;
+        grid-row: auto;
     }
 
     .sf-injury-svg-col {
-        flex-direction: column;
         align-items: center;
     }
 
@@ -1452,16 +1485,12 @@
     }
 
     .sf-heatmap-body-svg {
-        width: 80px;
-    }
-
-    .sf-injury-svg-hint {
-        max-width: none;
+        width: 130px;
     }
 }
 
 @media (max-width: 768px) {
     .sf-heatmap-body-svg {
-        width: 65px;
+        width: 110px;
     }
 }
