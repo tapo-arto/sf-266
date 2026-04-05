@@ -15,7 +15,7 @@ if (session_status() === PHP_SESSION_NONE) {
 $base = rtrim($config['base_url'] ?? '/', '/');
 $currentPage = $_GET['page'] ?? 'list';
 
-$allowedPages = ['dashboard', 'list', 'form', 'form_language', 'view', 'users', 'settings', 'profile', 'role_categories', 'feedback'];
+$allowedPages = ['dashboard', 'list', 'form', 'form_language', 'view', 'users', 'settings', 'profile', 'role_categories', 'feedback', 'updates'];
 if (!in_array($currentPage, $allowedPages, true)) {
     $currentPage = 'list';
 }
@@ -23,6 +23,43 @@ if (!in_array($currentPage, $allowedPages, true)) {
 // nykyinen käyttäjä & rooli
 $user    = sf_current_user();
 $isAdmin = $user && (int)$user['role_id'] === 1;
+
+// --- Updates notification badge ---
+$hasNewUpdates = false;
+$_sfIsHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443);
+if ($currentPage === 'updates') {
+    // User is on the Updates page – mark all current updates as seen
+    setcookie('sf_updates_last_seen', (string)time(), [
+        'expires'  => time() + (365 * 24 * 60 * 60),
+        'path'     => '/',
+        'secure'   => $_sfIsHttps,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+} else {
+    // Check whether there are published updates newer than the last visit
+    try {
+        $db = Database::getInstance();
+        $stmt = $db->query(
+            "SELECT UNIX_TIMESTAMP(created_at) AS created_ts
+             FROM sf_changelog
+             WHERE is_published = 1
+             ORDER BY created_at DESC
+             LIMIT 1"
+        );
+        $latestUpdate = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($latestUpdate) {
+            $latestTs  = (int)$latestUpdate['created_ts'];
+            $lastSeen  = isset($_COOKIE['sf_updates_last_seen']) ? (int)$_COOKIE['sf_updates_last_seen'] : 0;
+            if ($latestTs > $lastSeen) {
+                $hasNewUpdates = true;
+            }
+        }
+    } catch (Exception $e) {
+        // Silently ignore DB errors – badge simply won't show
+    }
+}
 
 // Tuetut kielet
 $availableLangs = ['fi' => 'FI', 'sv' => 'SV', 'en' => 'EN', 'it' => 'IT', 'el' => 'EL'];
@@ -254,6 +291,9 @@ sf_session_activity_tick(['is_api' => false, 'is_fetch' => false]);
                              class="sf-nav-link-icon"
                              aria-hidden="true">
                         <span><?= htmlspecialchars(sf_term('nav_updates', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php if ($hasNewUpdates): ?>
+                        <span class="sf-nav-badge" aria-label="<?= htmlspecialchars(sf_term('updates_new_badge', $uiLang), ENT_QUOTES, 'UTF-8') ?>"></span>
+                        <?php endif; ?>
                     </a>
 
 <?php if ($user && (int)$user['role_id'] === 1): ?>

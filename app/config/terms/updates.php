@@ -185,4 +185,11 @@ return [
     'it' => 'Filtra per mese:',
     'el' => 'Φιλτράρισμα ανά μήνα:',
 ],
+'updates_new_badge' => [
+    'fi' => 'Uusia päivityksiä',
+    'sv' => 'Nya uppdateringar',
+    'en' => 'New updates',
+    'it' => 'Nuovi aggiornamenti',
+    'el' => 'Νέες ενημερώσεις',
+],
 ];
