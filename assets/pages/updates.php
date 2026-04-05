@@ -24,11 +24,10 @@ $base    = rtrim($config['base_url'] ?? '', '/');
 // Load published changelog entries newest first
 $db = Database::getInstance();
 $stmt = $db->prepare(
-    "SELECT c.*, u.first_name, u.last_name
-     FROM sf_changelog c
-     LEFT JOIN sf_users u ON c.created_by = u.id
-     WHERE c.is_published = 1
-     ORDER BY c.created_at DESC"
+    "SELECT *
+     FROM sf_changelog
+     WHERE is_published = 1
+     ORDER BY created_at DESC"
 );
 $stmt->execute();
 $entries = $stmt->fetchAll();
@@ -85,10 +84,6 @@ function resolveTranslation(array $translations, string $lang, string $field): s
                 }
                 $title   = resolveTranslation($translations, $uiLang, 'title');
                 $content = resolveTranslation($translations, $uiLang, 'content');
-                $authorName = trim(($entry['first_name'] ?? '') . ' ' . ($entry['last_name'] ?? ''));
-                if ($authorName === '') {
-                    $authorName = 'Admin';
-                }
                 $dateStr = date('d.m.Y', strtotime($entry['created_at']));
                 ?>
                 <div class="sf-updates-item sf-card-appear">

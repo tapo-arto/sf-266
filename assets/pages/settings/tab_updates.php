@@ -105,7 +105,7 @@ $csrfToken = sf_csrf_token();
                         <button type="button"
                                 class="sf-btn sf-btn-small sf-btn-secondary btn-edit-update"
                                 data-id="<?= (int)$entry['id'] ?>"
-                                data-translations="<?= htmlspecialchars(json_encode($translations, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>"
+                                data-translations="<?= htmlspecialchars(json_encode($translations), ENT_QUOTES, 'UTF-8') ?>"
                                 data-is-published="<?= $isPublished ?>"
                                 data-feedback-id="<?= (int)($entry['feedback_id'] ?? 0) ?>">
                             <?= htmlspecialchars(sf_term('admin_updates_edit', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
