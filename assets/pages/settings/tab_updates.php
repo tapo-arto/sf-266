@@ -276,6 +276,13 @@ $csrfToken = sf_csrf_token();
     gap: 8px;
     flex-shrink: 0;
 }
+
+/* Remove yellow focus outline from Quill rich text editor */
+.sf-update-quill-editor .ql-editor:focus,
+.sf-update-quill-editor .ql-editor:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
 </style>
 
 <script src="<?= $baseUrl ?>/assets/js/vendor/quill.min.js"></script>
@@ -394,14 +401,15 @@ $csrfToken = sf_csrf_token();
             const isPublished = parseInt(this.dataset.isPublished, 10) === 1;
             const feedbackId = parseInt(this.dataset.feedbackId, 10) || 0;
 
-            document.getElementById('updateEditId').value = id;
-            document.getElementById('updateEditFeedbackId').value = feedbackId;
-            document.getElementById('updateIsPublished').checked = isPublished;
-
             // Open modal FIRST so editors become visible before Quill initializes
             openModal('modalUpdateEdit');
             // Reset (clears existing editor content if already initialized)
             resetForm();
+
+            // Set form values AFTER reset so they are not cleared
+            document.getElementById('updateEditId').value = id;
+            document.getElementById('updateEditFeedbackId').value = feedbackId;
+            document.getElementById('updateIsPublished').checked = isPublished;
 
             SUPPORTED_LANGS.forEach(lang => {
                 const titleEl = document.getElementById('updateTitle_' + lang);
