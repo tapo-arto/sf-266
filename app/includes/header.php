@@ -246,6 +246,16 @@ sf_session_activity_tick(['is_api' => false, 'is_fetch' => false]);
                         <span><?= htmlspecialchars(sf_term('nav_feedback', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
                     </a>
 
+                    <a href="<?= htmlspecialchars($base) ?>/index.php?page=updates"
+                       class="sf-nav-link <?= $currentPage === 'updates' ? 'sf-nav-active' : '' ?>"
+                       data-tooltip="<?= htmlspecialchars(sf_term('nav_updates', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                        <img src="<?= htmlspecialchars($base) ?>/assets/img/icons/changelog_icon.svg"
+                             alt=""
+                             class="sf-nav-link-icon"
+                             aria-hidden="true">
+                        <span><?= htmlspecialchars(sf_term('nav_updates', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                    </a>
+
 <?php if ($user && (int)$user['role_id'] === 1): ?>
 
     <a href="<?= htmlspecialchars($base) ?>/index.php?page=playlist_manager"

@@ -23,7 +23,7 @@ $mysqli = sf_db();
 
 // Aktiivinen välilehti
 $tab        = $_GET['tab'] ?? 'users';
-$allowedTabs = ['users', 'worksites', 'image_library', 'audit_log', 'role_categories', 'email_logs', 'email', 'system'];
+$allowedTabs = ['users', 'worksites', 'image_library', 'audit_log', 'role_categories', 'email_logs', 'email', 'system', 'updates'];
 
 if (!in_array($tab, $allowedTabs, true)) {
     $tab = 'users';
@@ -116,6 +116,16 @@ if (!in_array($tab, $allowedTabs, true)) {
         <img src="<?= $baseUrl ?>/assets/img/icons/screen.svg" alt="" class="sf-tab-icon" aria-hidden="true">
         <span><?= htmlspecialchars(
             sf_term('settings_tab_system', $currentUiLang) ?? 'Järjestelmä',
+            ENT_QUOTES,
+            'UTF-8'
+        ) ?></span>
+    </a>
+
+    <a href="<?= $baseUrl ?>/index.php?page=settings&tab=updates"
+       class="sf-tab <?= $tab === 'updates' ? 'active' : '' ?>">
+        <img src="<?= $baseUrl ?>/assets/img/icons/changelog_icon.svg" alt="" class="sf-tab-icon" aria-hidden="true">
+        <span><?= htmlspecialchars(
+            sf_term('settings_tab_updates', $currentUiLang),
             ENT_QUOTES,
             'UTF-8'
         ) ?></span>

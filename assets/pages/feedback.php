@@ -403,7 +403,83 @@ $statusConfig = [
             <button type="button" class="sf-btn sf-btn-secondary" data-modal-close>
                 <?= htmlspecialchars(sf_term('feedback_cancel', $uiLang), ENT_QUOTES, 'UTF-8') ?>
             </button>
+            <button type="button" class="sf-btn sf-btn-secondary" id="btnCreateUpdateFromFeedback"
+                    title="<?= htmlspecialchars(sf_term('feedback_create_update', $uiLang), ENT_QUOTES, 'UTF-8') ?>">
+                <img src="<?= $base ?>/assets/img/icons/changelog_icon.svg" alt="" class="sf-btn-icon" aria-hidden="true">
+                <?= htmlspecialchars(sf_term('feedback_create_update', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
             <button type="button" class="sf-btn sf-btn-primary" id="btnSaveFeedback">
+                <?= htmlspecialchars(sf_term('feedback_save', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Update from Feedback Modal -->
+<div id="modalCreateUpdate" class="sf-modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="sf-modal-content" style="max-width:660px;">
+        <div class="sf-modal-header">
+            <h3><?= htmlspecialchars(sf_term('feedback_create_update', $uiLang), ENT_QUOTES, 'UTF-8') ?></h3>
+            <button type="button" class="sf-modal-close-btn" data-modal-close aria-label="Close">×</button>
+        </div>
+
+        <form id="formCreateUpdate" class="sf-modal-body">
+            <?= sf_csrf_field() ?>
+            <input type="hidden" id="createUpdateFeedbackId" name="feedback_id" value="0">
+
+            <!-- Language tabs -->
+            <?php
+            $termsConfig   = sf_get_terms_config();
+            $supportedLangs = $termsConfig['languages'] ?? ['fi', 'sv', 'en', 'it', 'el'];
+            $langLabels = [
+                'fi' => 'Suomi (FI)', 'sv' => 'Svenska (SV)', 'en' => 'English (EN)',
+                'it' => 'Italiano (IT)', 'el' => 'Ελληνικά (EL)',
+            ];
+            ?>
+            <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;">
+                <?php foreach ($supportedLangs as $idx => $lang): ?>
+                    <button type="button"
+                            class="sf-btn sf-btn-small <?= $idx === 0 ? 'sf-btn-primary' : 'sf-btn-secondary' ?> sf-cu-lang-tab"
+                            data-lang="<?= htmlspecialchars($lang) ?>">
+                        <?= htmlspecialchars($langLabels[$lang] ?? strtoupper($lang)) ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+
+            <?php foreach ($supportedLangs as $idx => $lang): ?>
+                <div class="sf-cu-lang-panel" data-lang="<?= htmlspecialchars($lang) ?>"
+                     <?= $idx !== 0 ? 'style="display:none;"' : '' ?>>
+                    <div class="sf-form-group">
+                        <label for="cuTitle_<?= $lang ?>">
+                            <?= htmlspecialchars(sf_term('updates_field_title', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+                            (<?= strtoupper($lang) ?>)
+                        </label>
+                        <input type="text" id="cuTitle_<?= $lang ?>" class="sf-form-input sf-cu-title" data-lang="<?= $lang ?>">
+                    </div>
+                    <div class="sf-form-group">
+                        <label for="cuContent_<?= $lang ?>">
+                            <?= htmlspecialchars(sf_term('updates_field_content', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+                            (<?= strtoupper($lang) ?>)
+                        </label>
+                        <textarea id="cuContent_<?= $lang ?>" rows="4" class="sf-form-input sf-cu-content" data-lang="<?= $lang ?>"></textarea>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <div class="sf-form-group" style="margin-top:12px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="cuIsPublished" name="is_published" value="1"
+                           style="width:18px;height:18px;cursor:pointer;">
+                    <span><?= htmlspecialchars(sf_term('updates_field_is_published', $uiLang), ENT_QUOTES, 'UTF-8') ?></span>
+                </label>
+            </div>
+        </form>
+
+        <div class="sf-modal-actions">
+            <button type="button" class="sf-btn sf-btn-secondary" data-modal-close>
+                <?= htmlspecialchars(sf_term('feedback_cancel', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+            </button>
+            <button type="button" class="sf-btn sf-btn-primary" id="btnSaveCreateUpdate">
                 <?= htmlspecialchars(sf_term('feedback_save', $uiLang), ENT_QUOTES, 'UTF-8') ?>
             </button>
         </div>
@@ -604,6 +680,105 @@ $statusConfig = [
                     window.sfToast('danger', 'Network error');
                 } else {
                     alert('Network error');
+                }
+            }
+        });
+    }
+    
+    // Create Update from Feedback
+    if (IS_ADMIN) {
+        const SUPPORTED_LANGS_FB = <?= json_encode($supportedLangs ?? ['fi', 'sv', 'en', 'it', 'el']) ?>;
+
+        // Language tab switching for create-update modal
+        document.querySelectorAll('.sf-cu-lang-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const lang = this.dataset.lang;
+                document.querySelectorAll('.sf-cu-lang-tab').forEach(t => {
+                    t.classList.remove('sf-btn-primary');
+                    t.classList.add('sf-btn-secondary');
+                });
+                this.classList.add('sf-btn-primary');
+                this.classList.remove('sf-btn-secondary');
+                document.querySelectorAll('.sf-cu-lang-panel').forEach(p => {
+                    p.style.display = p.dataset.lang === lang ? '' : 'none';
+                });
+            });
+        });
+
+        document.getElementById('btnCreateUpdateFromFeedback')?.addEventListener('click', function() {
+            // Pre-fill FI title/content from feedback title/description
+            const feedbackId = parseInt(document.getElementById('manageFeedbackId').value, 10);
+            const feedbackTitle = document.getElementById('manageFeedbackTitle').textContent.trim();
+            const feedbackDesc = document.getElementById('manageFeedbackDescription').textContent.trim();
+            const adminNotes = document.getElementById('manageAdminNotes').value.trim();
+
+            // Reset fields
+            SUPPORTED_LANGS_FB.forEach(lang => {
+                const t = document.getElementById('cuTitle_' + lang);
+                const c = document.getElementById('cuContent_' + lang);
+                if (t) t.value = '';
+                if (c) c.value = '';
+            });
+            document.getElementById('cuIsPublished').checked = false;
+
+            // Pre-fill Finnish fields
+            const fiTitle = document.getElementById('cuTitle_fi');
+            const fiContent = document.getElementById('cuContent_fi');
+            if (fiTitle) fiTitle.value = feedbackTitle;
+            if (fiContent) fiContent.value = adminNotes || feedbackDesc;
+
+            document.getElementById('createUpdateFeedbackId').value = feedbackId;
+
+            // Activate first tab
+            const firstTab = document.querySelector('.sf-cu-lang-tab');
+            if (firstTab) firstTab.click();
+
+            closeModal('modalManageFeedback');
+            openModal('modalCreateUpdate');
+        });
+
+        document.getElementById('btnSaveCreateUpdate')?.addEventListener('click', async function() {
+            const feedbackId = parseInt(document.getElementById('createUpdateFeedbackId').value, 10) || 0;
+            const isPublished = document.getElementById('cuIsPublished').checked ? 1 : 0;
+
+            const translations = {};
+            SUPPORTED_LANGS_FB.forEach(lang => {
+                const title = (document.getElementById('cuTitle_' + lang)?.value || '').trim();
+                const content = (document.getElementById('cuContent_' + lang)?.value || '').trim();
+                if (title || content) {
+                    translations[lang] = { title, content };
+                }
+            });
+
+            const formData = new FormData();
+            formData.append('csrf_token', CSRF_TOKEN);
+            formData.append('feedback_id', feedbackId);
+            formData.append('is_published', isPublished);
+            formData.append('translations', JSON.stringify(translations));
+
+            try {
+                const response = await fetch(BASE_URL + '/app/api/changelog_create.php', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN },
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.ok) {
+                    if (typeof window.sfToast === 'function') {
+                        window.sfToast('success', <?= json_encode(sf_term('admin_updates_saved', $uiLang)) ?>);
+                    }
+                    closeModal('modalCreateUpdate');
+                } else {
+                    if (typeof window.sfToast === 'function') {
+                        window.sfToast('danger', data.error || <?= json_encode(sf_term('updates_error_save', $uiLang)) ?>);
+                    } else {
+                        alert(data.error || <?= json_encode(sf_term('updates_error_save', $uiLang)) ?>);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                if (typeof window.sfToast === 'function') {
+                    window.sfToast('danger', <?= json_encode(sf_term('updates_error_save', $uiLang)) ?>);
                 }
             }
         });
