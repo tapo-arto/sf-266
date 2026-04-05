@@ -86,6 +86,9 @@ function sf_updates_sanitize_html(string $html): string
             <?= htmlspecialchars(sf_term('updates_title', $uiLang), ENT_QUOTES, 'UTF-8') ?>
         </h1>
     </div>
+    <p class="sf-updates-description">
+        <?= htmlspecialchars(sf_term('updates_description', $uiLang), ENT_QUOTES, 'UTF-8') ?>
+    </p>
 
     <?php if (empty($entries)): ?>
         <div class="sf-updates-empty">
@@ -160,6 +163,13 @@ function sf_updates_sanitize_html(string $html): string
 </div>
 
 <style>
+.sf-updates-description {
+    margin: -0.5rem 0 1.5rem;
+    color: var(--sf-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
 .sf-updates-empty {
     padding: 48px 24px;
     text-align: center;

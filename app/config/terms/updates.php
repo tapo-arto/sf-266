@@ -17,6 +17,13 @@ return [
     'it' => 'Aggiornamenti',
     'el' => 'Ενημερώσεις',
 ],
+'updates_description' => [
+    'fi' => 'Täältä löydät tiedot sovelluksen uusimmista muutoksista, parannuksista ja uusista ominaisuuksista.',
+    'sv' => 'Här hittar du information om de senaste ändringarna, förbättringarna och nya funktionerna i applikationen.',
+    'en' => 'Here you can find information about the latest changes, improvements, and new features in the application.',
+    'it' => 'Qui puoi trovare informazioni sulle ultime modifiche, miglioramenti e nuove funzionalità dell\'applicazione.',
+    'el' => 'Εδώ μπορείτε να βρείτε πληροφορίες για τις τελευταίες αλλαγές, βελτιώσεις και νέες λειτουργίες της εφαρμογής.',
+],
 'updates_empty' => [
     'fi' => 'Ei vielä päivityksiä.',
     'sv' => 'Inga uppdateringar ännu.',

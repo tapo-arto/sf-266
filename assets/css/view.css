@@ -4272,3 +4272,10 @@ body.sf-modal-open #previewImageModal .sf-download-buttons {
     min-height: 120px;
     height: auto;
 }
+
+/* Remove yellow focus outline from Quill rich text editor */
+.ql-editor:focus,
+.ql-editor:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
