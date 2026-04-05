@@ -168,11 +168,15 @@ $csrfToken = sf_csrf_token();
                             <?= htmlspecialchars(sf_term('updates_field_content', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                             (<?= htmlspecialchars(strtoupper($lang)) ?>)
                         </label>
-                        <textarea id="updateContent_<?= $lang ?>"
-                                  name="content_<?= $lang ?>"
-                                  rows="5"
-                                  class="sf-form-input sf-update-content-field"
-                                  data-lang="<?= htmlspecialchars($lang) ?>"></textarea>
+                        <div id="updateContentEditor_<?= $lang ?>"
+                             class="sf-update-quill-editor"
+                             data-lang="<?= htmlspecialchars($lang) ?>"
+                             style="min-height:140px;background:#fff;"></div>
+                        <input type="hidden"
+                               id="updateContent_<?= $lang ?>"
+                               name="content_<?= $lang ?>"
+                               class="sf-update-content-field"
+                               data-lang="<?= htmlspecialchars($lang) ?>">
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -198,6 +202,16 @@ $csrfToken = sf_csrf_token();
 </div>
 
 <style>
+.sf-update-quill-editor .ql-toolbar {
+    border-radius: var(--sf-radius, 14px) var(--sf-radius, 14px) 0 0;
+    border-color: var(--sf-border);
+}
+.sf-update-quill-editor .ql-container {
+    border-radius: 0 0 var(--sf-radius, 14px) var(--sf-radius, 14px);
+    border-color: var(--sf-border);
+    font-size: 0.9rem;
+    font-family: inherit;
+}
 .sf-updates-admin-list {
     display: flex;
     flex-direction: column;
@@ -264,6 +278,8 @@ $csrfToken = sf_csrf_token();
 }
 </style>
 
+<script src="<?= $baseUrl ?>/assets/js/vendor/quill.min.js"></script>
+<script src="<?= $baseUrl ?>/assets/js/vendor/purify.min.js"></script>
 <script>
 (function () {
     const BASE_URL = <?= json_encode($baseUrl, JSON_UNESCAPED_SLASHES) ?>;
@@ -279,6 +295,39 @@ $csrfToken = sf_csrf_token();
         titleNew:      <?= json_encode(sf_term('admin_updates_new', $currentUiLang)) ?>,
         titleEdit:     <?= json_encode(sf_term('admin_updates_edit', $currentUiLang)) ?>,
     };
+
+    // Quill instances keyed by language code
+    const quillEditors = {};
+    const SAFE_TAGS = ['P', 'BR', 'STRONG', 'EM', 'U', 'OL', 'UL', 'LI', 'SPAN'];
+    const QUILL_EMPTY_HTML = '<p><br></p>';
+
+    function sanitizeHtml(html) {
+        if (typeof DOMPurify !== 'undefined') {
+            return DOMPurify.sanitize(html, { ALLOWED_TAGS: SAFE_TAGS, ALLOWED_ATTR: [] });
+        }
+        return html;
+    }
+
+    function getQuillEditor(lang) {
+        if (quillEditors[lang]) { return quillEditors[lang]; }
+        if (typeof Quill === 'undefined') { return null; }
+        const editorEl = document.getElementById('updateContentEditor_' + lang);
+        if (!editorEl) { return null; }
+        quillEditors[lang] = new Quill('#updateContentEditor_' + lang, {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+        return quillEditors[lang];
+    }
+
+    // Initialize Quill editors for all languages up front
+    SUPPORTED_LANGS.forEach(function (lang) { getQuillEditor(lang); });
 
     function openModal(id) {
         const m = document.getElementById(id);
@@ -318,9 +367,9 @@ $csrfToken = sf_csrf_token();
         document.getElementById('updateIsPublished').checked = false;
         SUPPORTED_LANGS.forEach(lang => {
             const titleEl = document.getElementById('updateTitle_' + lang);
-            const contentEl = document.getElementById('updateContent_' + lang);
             if (titleEl) titleEl.value = '';
-            if (contentEl) contentEl.value = '';
+            const q = quillEditors[lang];
+            if (q) { q.setContents([]); }
         });
         // Activate first language tab
         const firstTab = document.querySelector('.sf-update-lang-tab');
@@ -350,9 +399,16 @@ $csrfToken = sf_csrf_token();
 
             SUPPORTED_LANGS.forEach(lang => {
                 const titleEl = document.getElementById('updateTitle_' + lang);
-                const contentEl = document.getElementById('updateContent_' + lang);
                 if (titleEl) titleEl.value = (translations[lang] && translations[lang].title) || '';
-                if (contentEl) contentEl.value = (translations[lang] && translations[lang].content) || '';
+                const q = quillEditors[lang];
+                if (q) {
+                    const rawContent = (translations[lang] && translations[lang].content) || '';
+                    if (rawContent) {
+                        q.clipboard.dangerouslyPasteHTML(sanitizeHtml(rawContent));
+                    } else {
+                        q.setContents([]);
+                    }
+                }
             });
 
             openModal('modalUpdateEdit');
@@ -365,13 +421,16 @@ $csrfToken = sf_csrf_token();
         const feedbackId = parseInt(document.getElementById('updateEditFeedbackId').value, 10) || 0;
         const isPublished = document.getElementById('updateIsPublished').checked ? 1 : 0;
 
-        // Build translations object
+        // Build translations object using Quill editor content
         const translations = {};
         SUPPORTED_LANGS.forEach(lang => {
             const title = (document.getElementById('updateTitle_' + lang)?.value || '').trim();
-            const content = (document.getElementById('updateContent_' + lang)?.value || '').trim();
-            if (title || content) {
-                translations[lang] = { title, content };
+            const q = quillEditors[lang];
+            const content = q ? sanitizeHtml(q.root.innerHTML).trim() : '';
+            // Quill empty state produces QUILL_EMPTY_HTML — treat as empty
+            const isEmpty = !content || content === QUILL_EMPTY_HTML;
+            if (title || !isEmpty) {
+                translations[lang] = { title, content: isEmpty ? '' : content };
             }
         });
 
