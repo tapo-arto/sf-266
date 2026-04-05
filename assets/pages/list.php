@@ -487,7 +487,7 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
         </button>
         
         <!-- Clear filters -->
-        <?php $hasExplicitFilters = ($type !== '' || $state !== '' || (!$siteIsDefault && $site !== '') || $q !== '' || $from !== '' || $to !== '' || $archived !== ''); ?>
+        <?php $hasExplicitFilters = ($type !== '' || $originalType !== '' || $state !== '' || (!$siteIsDefault && $site !== '') || $q !== '' || $from !== '' || $to !== '' || $archived !== ''); ?>
         <button type="button" class="sf-filter-clear-btn<?= !$hasExplicitFilters ? ' hidden' : '' ?>" id="sf-clear-all-btn" title="<?= htmlspecialchars(sf_term('filter_clear_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -746,6 +746,26 @@ $currentUiLang = $uiLang ?? DEFAULT_LANG;
 
             <div class="filter-item">
                 <label>
+                    <?= htmlspecialchars(sf_term('filter_original_type', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                </label>
+                <select name="original_type">
+                    <option value="">
+                        <?= htmlspecialchars(sf_term('filter_all', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                    </option>
+                    <option value="red" <?= $originalType === 'red' ? 'selected' : '' ?>>
+                        <?= htmlspecialchars(sf_term('first_release', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                    </option>
+                    <option value="yellow" <?= $originalType === 'yellow' ? 'selected' : '' ?>>
+                        <?= htmlspecialchars(sf_term('dangerous_situation', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                    </option>
+                    <option value="green" <?= $originalType === 'green' ? 'selected' : '' ?>>
+                        <?= htmlspecialchars(sf_term('investigation_report', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
+                    </option>
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label>
                     <?= htmlspecialchars(sf_term('filter_state', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>
                 </label>
                 <select name="state">
@@ -907,6 +927,28 @@ foreach ($rows as $r) {
     $allGroupIds[$gid] = $gid; // Use as key to avoid duplicates
 }
 $allTranslations = sf_get_all_translations($pdo, array_values($allGroupIds));
+
+// Batch-fetch body parts for all displayed flashes to avoid N+1 queries
+$allBodyParts = [];
+if (!empty($rows)) {
+    $flashIds = array_map(fn($r) => (int)$r['id'], $rows);
+    $bpPlaceholders = implode(',', array_fill(0, count($flashIds), '?'));
+    try {
+        $bpBatchStmt = $pdo->prepare(
+            "SELECT ibp.incident_id, bp.svg_id, bp.name
+             FROM incident_body_part ibp
+             JOIN body_parts bp ON bp.id = ibp.body_part_id
+             WHERE ibp.incident_id IN ({$bpPlaceholders})
+             ORDER BY bp.sort_order ASC"
+        );
+        $bpBatchStmt->execute(array_map('intval', $flashIds));
+        foreach ($bpBatchStmt->fetchAll(PDO::FETCH_ASSOC) as $bpRow) {
+            $allBodyParts[(int)$bpRow['incident_id']][] = $bpRow;
+        }
+    } catch (Throwable $e) {
+        error_log('list.php: Error fetching body parts: ' . $e->getMessage());
+    }
+}
 
 // PROSESSOINNISSA OLEVAT KORTIT - POISTETTU
 // Käytetään vain pollausta taustalla, ei näytetä kortteja listassa
@@ -1183,7 +1225,46 @@ $allTranslations = sf_get_all_translations($pdo, array_values($allGroupIds));
                 <?= htmlspecialchars(sf_term('card_modified', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>:
                 <?= htmlspecialchars($r['updatedFmt'] ?? '') ?>
             </span>
+
+            <?php
+            // Show original type badge only when it differs from current type (i.e. the report has been converted)
+            $origType = $r['original_type'] ?? null;
+            if (!empty($origType) && $origType !== $r['type']):
+                $origTypeKey   = $typeKeyMap[$origType] ?? null;
+                $origTypeLabel = $origTypeKey ? sf_term($origTypeKey, $currentUiLang) : null;
+                if ($origTypeLabel):
+            ?>
+                <span class="card-original-type">
+                    <span class="card-original-type-label"><?= htmlspecialchars(sf_term('settings_original_type_label', $currentUiLang), ENT_QUOTES, 'UTF-8') ?>:</span>
+                    <span class="badge badge-original-type badge-original-<?= htmlspecialchars($origType) ?>"><?= htmlspecialchars($origTypeLabel) ?></span>
+                </span>
+            <?php endif; endif; ?>
          </div>
+
+         <?php
+         // Body parts – show as small pills when any are recorded for this flash
+         $flashBodyParts = $allBodyParts[(int)$r['id']] ?? [];
+         if (!empty($flashBodyParts)):
+         ?>
+         <div class="card-body-parts">
+             <svg class="card-body-parts-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                 <circle cx="9" cy="7" r="4"></circle>
+                 <line x1="23" y1="11" x2="17" y2="11"></line>
+             </svg>
+             <?php foreach ($flashBodyParts as $bp):
+                 $bpTermKey = str_replace('-', '_', $bp['svg_id']);
+                 $bpLabel   = sf_term($bpTermKey, $currentUiLang);
+                 if ($bpLabel === $bpTermKey) {
+                     $bpLabel = $bp['name']; // fallback to DB name if term missing
+                 }
+             ?>
+             <span class="card-body-part-tag" title="<?= htmlspecialchars($bpLabel) ?>">
+                 <?= htmlspecialchars($bpLabel) ?>
+             </span>
+             <?php endforeach; ?>
+         </div>
+         <?php endif; ?>
          
          <!-- Editing indicator placeholder (populated by JavaScript) -->
          <div class="sf-editing-indicator" data-flash-id="<?= (int)$r['id'] ?>">
