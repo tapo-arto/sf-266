@@ -26,14 +26,14 @@ $isAdmin = $user && (int)$user['role_id'] === 1;
 
 // --- Updates notification badge ---
 $hasNewUpdates = false;
-$_sfIsHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443);
 if ($currentPage === 'updates') {
     // User is on the Updates page – mark all current updates as seen
     setcookie('sf_updates_last_seen', (string)time(), [
         'expires'  => time() + (365 * 24 * 60 * 60),
         'path'     => '/',
-        'secure'   => $_sfIsHttps,
+        'secure'   => $isHttps,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -49,13 +49,14 @@ if ($currentPage === 'updates') {
     } else {
         try {
             $db = Database::getInstance();
-            $stmt = $db->query(
+            $stmt = $db->prepare(
                 "SELECT UNIX_TIMESTAMP(created_at) AS created_ts
                  FROM sf_changelog
                  WHERE is_published = 1
                  ORDER BY created_at DESC
                  LIMIT 1"
             );
+            $stmt->execute();
             $latestUpdate = $stmt->fetch(PDO::FETCH_ASSOC);
             $latestTs = $latestUpdate ? (int)$latestUpdate['created_ts'] : 0;
             $_SESSION['sf_updates_badge_cache'] = ['fetched' => time(), 'latest_ts' => $latestTs];
