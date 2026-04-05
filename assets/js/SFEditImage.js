@@ -53,7 +53,9 @@ window.SFImageEditor = (() => {
                 selectedRot: (selected && selected.type === 'icon') ? Number(selected.rot || 0) : null,
 
                 // icon + blur
-                selectedSize: (selected && (selected.type === 'icon' || selected.type === 'blur')) ? Number(selected.size || 140) : null,
+                selectedSize: (selected && (selected.type === 'icon' || selected.type === 'blur'))
+                    ? Number(selected.size || (selected.type === 'icon' ? 72 : 140))
+                    : null,
 
                 // text-only
                 selectedText: (selected && selected.type === 'text') ? String(selected.text || '') : null,
@@ -1307,7 +1309,14 @@ window.SFImageEditor = (() => {
     }
 
     // Shared helper: draw annotations onto any 2D context
-    // drawBgFn (optional): called inside the blur clip to re-render the background image
+    /**
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Array} anns
+     * @param {function(CanvasRenderingContext2D):void} [drawBgFn] - Optional callback that
+     *   re-draws the background image onto the given context. Used by blur annotations to
+     *   render the blurred background inside the clip region. If omitted, falls back to the
+     *   module-level drawImageWithTransform (correct for live draw and drawForExport).
+     */
     function _drawAnnotationsOnCtx(ctx, anns, drawBgFn) {
         if (!anns || !anns.length) return;
 

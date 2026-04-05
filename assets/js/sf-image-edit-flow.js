@@ -138,7 +138,7 @@ filter: brightness(0) invert(1);
         const vy = rect.top + (y / canvas.height) * rect.height;
 
         // Lasketaan "kuinka paljon ylemmäs" toolbar siirretään, jotta se ei mene ikonille
-        // Huomioi CSS-skaalaus: canvas on 1920px leveä, mutta näytöllä pienempi
+        // Huomioi CSS-skaalaus: canvas sisäinen koko voi olla paljon suurempi kuin näytöllä
         const canvasScale = rect.height / canvas.height;
         const selSizePx = Number(detail.selectedSize || 140) * canvasScale;
         const iconHalf = Math.max(18, selSizePx / 2);
