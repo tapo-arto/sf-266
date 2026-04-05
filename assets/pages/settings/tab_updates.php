@@ -326,8 +326,9 @@ $csrfToken = sf_csrf_token();
         return quillEditors[lang];
     }
 
-    // Initialize Quill editors for all languages up front
-    SUPPORTED_LANGS.forEach(function (lang) { getQuillEditor(lang); });
+    // Do NOT initialize Quill editors up front — the modal is hidden (display:none)
+    // and Quill cannot measure/render inside an invisible container.
+    // Editors are initialized lazily when the modal is first opened.
 
     function openModal(id) {
         const m = document.getElementById(id);
@@ -378,15 +379,15 @@ $csrfToken = sf_csrf_token();
 
     // New update
     document.getElementById('btnNewUpdate')?.addEventListener('click', function () {
-        resetForm();
         document.getElementById('modalUpdateEditTitle').textContent = i18n.titleNew;
+        // Open modal first so editors are visible (not display:none) before Quill initializes
         openModal('modalUpdateEdit');
+        resetForm();
     });
 
     // Edit update
     document.querySelectorAll('.btn-edit-update').forEach(btn => {
         btn.addEventListener('click', function () {
-            resetForm();
             document.getElementById('modalUpdateEditTitle').textContent = i18n.titleEdit;
             const id = this.dataset.id;
             const translations = JSON.parse(this.dataset.translations || '{}');
@@ -397,10 +398,16 @@ $csrfToken = sf_csrf_token();
             document.getElementById('updateEditFeedbackId').value = feedbackId;
             document.getElementById('updateIsPublished').checked = isPublished;
 
+            // Open modal FIRST so editors become visible before Quill initializes
+            openModal('modalUpdateEdit');
+            // Reset (clears existing editor content if already initialized)
+            resetForm();
+
             SUPPORTED_LANGS.forEach(lang => {
                 const titleEl = document.getElementById('updateTitle_' + lang);
                 if (titleEl) titleEl.value = (translations[lang] && translations[lang].title) || '';
-                const q = quillEditors[lang];
+                // Use getQuillEditor (lazy init) so editor is created now that modal is visible
+                const q = getQuillEditor(lang);
                 if (q) {
                     const rawContent = (translations[lang] && translations[lang].content) || '';
                     if (rawContent) {
@@ -410,8 +417,6 @@ $csrfToken = sf_csrf_token();
                     }
                 }
             });
-
-            openModal('modalUpdateEdit');
         });
     });
 
